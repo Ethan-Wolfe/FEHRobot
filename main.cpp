@@ -7,6 +7,8 @@
 /*
 * * * * Constants * * * *
 */
+enum WheelID {LEFTWHEEL = 0, RIGHTWHEEL = 1};
+
 enum DriveDirection {FORWARD = 1, BACKWARD = 0};
 enum TurnDirection {RIGHT = 1, LEFT = 0};
 
@@ -16,11 +18,17 @@ enum TurnDirection {RIGHT = 1, LEFT = 0};
 /** WHEELS **/
 //FEHMotor var(FEHMotor::port, float voltage) 
 FEHMotor left_wheel(FEHMotor::---, ---);
+int left_wheel_percent = 0;
 FEHMotor right_wheel(FEHMotor::---, ---);
+int right_wheel_percent = 0;
+
 
 /*
 * * * * Function prototypes * * * *
 */
+/** MOTORS **/
+void setWheel(WheelID wheel, float percent);
+void stopAllWheels();
 /** MOVEMENT **/
 void driveStraight(DriveDirection direction, float speed, float seconds);
 void turn(TurnDirection direction, float speed, float seconds);
@@ -30,18 +38,38 @@ void resetSceen();
 /** DEBUG **/
 void printDebug();
 
-
 /*
 * * * * Functions * * * *
 */
+/** MOTORS **/
+void setWheel(WheelID wheel, float percent) {
+	switch (wheel) {
+	  case LEFTWHEEL:
+	    left_wheel.SetPercent(percent);
+		left_wheel_percent = percent;
+	    break;
+	  case RIGHTWHEEL:
+	    right_wheel.SetPercent(percent);
+		right_wheel_percent = percent;
+	    break;
+	  default:
+	  	LCD.WriteLine("setWheel ERROR");
+	}
+}
+void stopAllWheels() {
+	setWheel(RIGHTWHEEL, 0);
+	setWheel(LEFTWHEEL, 0);
+}
+
+
 /** MOVEMENT **/
 void driveStraight(DriveDirection direction, float speed, float seconds) {
 	if direction == FORWARD {
-	    right_wheel.SetPercent(speed);
-	    left_wheel.SetPercent(speed);
+		setWheel(RIGHTWHEEL, speed);
+		setWheel(LEFTWHEEL, speed);
 	} else {
-	    right_wheel.SetPercent(-speed);
-	    left_wheel.SetPercent(-speed);
+		setWheel(RIGHTWHEEL, -speed);
+		setWheel(LEFTWHEEL, -speed);
 	}
 	
 	Sleep(seconds);
@@ -82,7 +110,8 @@ void printDebug() {
 	
 	//Declaring display content
 	int length = 1;
-	std::string debugString = {"test"};
+	//"Motor_Left: "+std::to_string(motor)
+	std::string debugString = {"Motor_Left: "};
 	
 	//Display
 	for (int i=0; i<length; i++) {
@@ -95,6 +124,7 @@ void printDebug() {
 */
 int main(void)
 {
+	//Start off by clearing screen
 	resetScreen();
 	
 	
