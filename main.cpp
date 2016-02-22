@@ -2,24 +2,39 @@
 #include <FEHUtility.h>
 #include <FEHMotor.h>
 
+#include <string>
+
 /*
 * * * * Constants * * * *
 */
 enum DriveDirection {FORWARD = 1, BACKWARD = 0};
 enum TurnDirection {RIGHT = 1, LEFT = 0};
 
-
 /*
 * * * * Variables * * * *
 */
+/** WHEELS **/
 //FEHMotor var(FEHMotor::port, float voltage) 
 FEHMotor left_wheel(FEHMotor::---, ---);
 FEHMotor right_wheel(FEHMotor::---, ---);
+
+/*
+* * * * Function prototypes * * * *
+*/
+/** MOVEMENT **/
+void driveStraight(DriveDirection direction, float speed, float seconds);
+void turn(TurnDirection direction, float speed, float seconds);
+/** DATA ACQUISTITION **/
+/** OTHER **/
+void resetSceen();
+/** DEBUG **/
+void printDebug();
 
 
 /*
 * * * * Functions * * * *
 */
+/** MOVEMENT **/
 void driveStraight(DriveDirection direction, float speed, float seconds) {
 	if direction == FORWARD {
 	    right_wheel.SetPercent(speed);
@@ -50,15 +65,37 @@ void turn(TurnDirection direction, float speed, float seconds) {
 	left_wheel.SetPercent(0);
 }
 
+/** DATA ACQUISTITION **/
+
+
+/** OTHER **/
+void resetSceen() {
+    LCD.Clear( FEHLCD::Black );
+    LCD.SetFontColor( FEHLCD::White );
+}
+
+
+/** DEBUG **/
+void printDebug() {
+	//Clear screen
+	resetScreen()
+	
+	//Declaring display content
+	int length = 1;
+	std::string debugString = {"test"};
+	
+	//Display
+	for (int i=0; i<length; i++) {
+		LCD.WriteLine(debugString[i]);
+	}
+}
 
 /*
 * * * * Main * * * *
 */
 int main(void)
 {
-	//Clear the proteus screen
-    LCD.Clear( FEHLCD::Black );
-    LCD.SetFontColor( FEHLCD::White );
+	resetScreen();
 	
 	
 	
