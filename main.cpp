@@ -12,6 +12,7 @@ enum WheelID {LEFTWHEEL = 0, RIGHTWHEEL = 1};
 enum DriveDirection {FORWARD = 1, BACKWARD = 0};
 enum TurnDirection {RIGHT = 1, LEFT = 0};
 
+
 /*
 * * * * Variables * * * *
 */
@@ -37,6 +38,7 @@ void turn(TurnDirection direction, float speed, float seconds);
 void resetSceen();
 /** DEBUG **/
 void printDebug();
+
 
 /*
 * * * * Functions * * * *
@@ -74,8 +76,7 @@ void driveStraight(DriveDirection direction, float speed, float seconds) {
 	
 	Sleep(seconds);
 	
-	right_wheel.SetPercent(0);
-	left_wheel.SetPercent(0);
+	stopAllWheels();
 }
 
 void turn(TurnDirection direction, float speed, float seconds) {
@@ -95,13 +96,11 @@ void turn(TurnDirection direction, float speed, float seconds) {
 
 /** DATA ACQUISTITION **/
 
-
 /** OTHER **/
 void resetSceen() {
     LCD.Clear( FEHLCD::Black );
     LCD.SetFontColor( FEHLCD::White );
 }
-
 
 /** DEBUG **/
 void printDebug() {
@@ -109,15 +108,18 @@ void printDebug() {
 	resetScreen()
 	
 	//Declaring display content
-	int length = 1;
-	//"Motor_Left: "+std::to_string(motor)
-	std::string debugString = {"Motor_Left: "};
+	int length = 2;
+	std::string debugString = {
+		"Motor_Left: "+std::to_string(left_wheel_percent),
+		"Motor_Right: "+std::to_string(right_wheel_percent)
+	};
 	
 	//Display
 	for (int i=0; i<length; i++) {
 		LCD.WriteLine(debugString[i]);
 	}
 }
+
 
 /*
 * * * * Main * * * *
