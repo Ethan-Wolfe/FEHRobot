@@ -19,24 +19,28 @@ enum TurnDirection {RIGHT = 1, LEFT = 0};
 /** WHEELS **/
 //FEHMotor var(FEHMotor::port, float voltage) 
 FEHMotor left_wheel(FEHMotor::---, ---);
-int left_wheel_percent = 0;
+int g_left_wheel_percent = 0;
 FEHMotor right_wheel(FEHMotor::---, ---);
-int right_wheel_percent = 0;
+int g_right_wheel_percent = 0;
 
 
 /*
 * * * * Function prototypes * * * *
 */
 /** MOTORS **/
-void setWheel(WheelID wheel, float percent);
+void setWheelPercent(WheelID wheel, float percent);
 void stopAllWheels();
-/** MOVEMENT **/
+/** BASIC MOVEMENT **/
 void driveStraight(DriveDirection direction, float speed, float seconds);
+void driveStraight(DriveDirection direction, float distance);
 void turn(TurnDirection direction, float speed, float seconds);
+void turn90(TurnDirection direction);
 /** DATA ACQUISTITION **/
+int getHeading();
 /** OTHER **/
 void resetSceen();
 /** DEBUG **/
+char startupTest();
 void printDebug();
 
 
@@ -44,34 +48,34 @@ void printDebug();
 * * * * Functions * * * *
 */
 /** MOTORS **/
-void setWheel(WheelID wheel, float percent) {
+void setWheelPercent(WheelID wheel, float percent) {
 	switch (wheel) {
 	  case LEFTWHEEL:
 	    left_wheel.SetPercent(percent);
-		left_wheel_percent = percent;
+		g_left_wheel_percent = percent;
 	    break;
 	  case RIGHTWHEEL:
 	    right_wheel.SetPercent(percent);
-		right_wheel_percent = percent;
+		g_right_wheel_percent = percent;
 	    break;
 	  default:
-	  	LCD.WriteLine("setWheel ERROR");
+	  	LCD.WriteLine("setWheelPercent ERROR");
 	}
 }
 void stopAllWheels() {
-	setWheel(RIGHTWHEEL, 0);
-	setWheel(LEFTWHEEL, 0);
+	setWheelPercent(RIGHTWHEEL, 0);
+	setWheelPercent(LEFTWHEEL, 0);
 }
 
 
-/** MOVEMENT **/
+/** BASIC MOVEMENT **/
 void driveStraight(DriveDirection direction, float speed, float seconds) {
 	if direction == FORWARD {
-		setWheel(RIGHTWHEEL, speed);
-		setWheel(LEFTWHEEL, speed);
+		setWheelPercent(RIGHTWHEEL, speed);
+		setWheelPercent(LEFTWHEEL, speed);
 	} else {
-		setWheel(RIGHTWHEEL, -speed);
-		setWheel(LEFTWHEEL, -speed);
+		setWheelPercent(RIGHTWHEEL, -speed);
+		setWheelPercent(LEFTWHEEL, -speed);
 	}
 	
 	Sleep(seconds);
@@ -81,17 +85,16 @@ void driveStraight(DriveDirection direction, float speed, float seconds) {
 
 void turn(TurnDirection direction, float speed, float seconds) {
 	if direction == RIGHT {
-	    right_wheel.SetPercent(speed);
-	    left_wheel.SetPercent(-speed);
+		setWheelPercent(RIGHTWHEEL, speed);
+		setWheelPercent(LEFTWHEEL, -speed);
 	} else {
-	    right_wheel.SetPercent(-speed);
-	    left_wheel.SetPercent(speed);
+		setWheelPercent(RIGHTWHEEL, -speed);
+		setWheelPercent(LEFTWHEEL, speed);
 	}
 	
 	Sleep(seconds);
 	
-	right_wheel.SetPercent(0);
-	left_wheel.SetPercent(0);
+	stopAllWheels();
 }
 
 /** DATA ACQUISTITION **/
@@ -99,18 +102,23 @@ void turn(TurnDirection direction, float speed, float seconds) {
 /** OTHER **/
 void resetSceen() {
     LCD.Clear( FEHLCD::Black );
-    LCD.SetFontColor( FEHLCD::White );
 }
 
 /** DEBUG **/
+char startupTest() {
+	//Test to make sure everything is reading normal values
+	//Return 0 if everything is okay
+	return 0;
+}
+
 void printDebug() {
 	//Clear screen
 	resetScreen()
 	
 	//Declaring display content
 	int length = 2;
-	std::string debugString = {
-		"Motor_Left: "+std::to_string(left_wheel_percent),
+	std::string debugString [length] = {
+		"Motor_Left: "+std::to_string(g_left_wheel_percent),
 		"Motor_Right: "+std::to_string(right_wheel_percent)
 	};
 	
@@ -127,7 +135,15 @@ void printDebug() {
 int main(void)
 {
 	//Start off by clearing screen
+	LCD.SetFontColor( FEHLCD::White );
 	resetScreen();
+	
+	//Call startup test to make sure everything is okay
+	if (startupTest() != 0) {
+		while (true) {
+			LCD.WriteLine("Startup Test Failure.")
+		}
+	}
 	
 	
 	
