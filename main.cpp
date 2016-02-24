@@ -38,16 +38,19 @@ void setWheelPercent(WheelID wheel, float percent);
 void stopAllWheels();
 /** BASIC MOVEMENT **/
 void driveStraight(DriveDirection direction, float speed, float seconds);
-void driveStraight(DriveDirection direction, float distance);
+void driveStraight(DriveDirection direction, float distance); //NOT IMPLEMENTED
+void driveStraight(DriveDirection direction);
 void turn(TurnDirection direction, float speed, float seconds);
-void turn90(TurnDirection direction);
+void turn90(TurnDirection direction); //NOT IMPLEMENTED
 /** DATA ACQUISTITION **/
-int getHeading();
+int getHeading(); //NOT IMPLEMENTED
+bool isFrontAgainstWall();
+bool isBackAgainstWall();
 /** OTHER **/
 void resetSceen();
 /** DEBUG **/
-char startupTest();
-void printDebug();
+char startupTest(); //NOT IMPLEMENTED
+void printDebug(); //NOT IMPLEMENTED
 
 
 /*
@@ -88,6 +91,15 @@ void driveStraight(DriveDirection direction, float speed, float seconds) {
 	
 	stopAllWheels();
 }
+void driveStraight(DriveDirection direction) {
+	if direction == FORWARD {
+		setWheelPercent(RIGHTWHEEL, speed);
+		setWheelPercent(LEFTWHEEL, speed);
+	} else {
+		setWheelPercent(RIGHTWHEEL, -speed);
+		setWheelPercent(LEFTWHEEL, -speed);
+	}
+}
 
 void turn(TurnDirection direction, float speed, float seconds) {
 	if direction == RIGHT {
@@ -104,6 +116,12 @@ void turn(TurnDirection direction, float speed, float seconds) {
 }
 
 /** DATA ACQUISTITION **/
+bool isFrontAgainstWall() {
+	return top_left_bump.Value()==false && top_right_bump.Value()==false
+}
+bool isBackAgainstWall() {
+	return bottom_left_bump.Value()==false && bottom_right_bump.Value()==false
+}
 
 /** OTHER **/
 void resetSceen() {
