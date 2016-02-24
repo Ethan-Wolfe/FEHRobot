@@ -23,6 +23,12 @@ int g_left_wheel_percent = 0;
 FEHMotor right_wheel(FEHMotor::---, ---);
 int g_right_wheel_percent = 0;
 
+/** BUMP SWITCHES **/
+DigitalInputPin bottom_left_bump(FEHIO::---);
+DigitalInputPin bottom_right_bump(FEHIO::---);
+DigitalInputPin top_left_bump(FEHIO::---);
+DigitalInputPin top_right_bump(FEHIO::---);
+
 
 /*
 * * * * Function prototypes * * * *
@@ -113,7 +119,7 @@ char startupTest() {
 
 void printDebug() {
 	//Clear screen
-	resetScreen()
+	resetScreen();
 	
 	//Declaring display content
 	int length = 2;
