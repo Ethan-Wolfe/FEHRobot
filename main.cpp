@@ -1,8 +1,10 @@
 #include <FEHLCD.h>
+#include <FEHServo.h>
+#include <FEHIO.h>
 #include <FEHUtility.h>
 #include <FEHMotor.h>
 
-#include <string>
+//#include <string>
 
 /*
 * * * * Constants * * * *
@@ -17,17 +19,20 @@ enum TurnDirection {RIGHT = 1, LEFT = 0};
 * * * * Variables * * * *
 */
 /** WHEELS **/
-//FEHMotor var(FEHMotor::port, float voltage) 
-FEHMotor left_wheel(FEHMotor::---, ---);
+//FEHMotor var(FEHMotor::port, float voltage);
+FEHMotor left_wheel(FEHMotor::Motor0, 7.2);   /** CHANGE THIS **/
 int g_left_wheel_percent = 0;
-FEHMotor right_wheel(FEHMotor::---, ---);
+FEHMotor right_wheel(FEHMotor::Motor1, 7.2);    /** CHANGE THIS **/
 int g_right_wheel_percent = 0;
 
 /** BUMP SWITCHES **/
-DigitalInputPin bottom_left_bump(FEHIO::---);
-DigitalInputPin bottom_right_bump(FEHIO::---);
-DigitalInputPin top_left_bump(FEHIO::---);
-DigitalInputPin top_right_bump(FEHIO::---);
+DigitalInputPin bottom_left_bump(FEHIO::P1_1);   /** CHANGE THIS **/
+DigitalInputPin bottom_right_bump(FEHIO::P0_2);    /** CHANGE THIS **/
+DigitalInputPin top_left_bump(FEHIO::P0_0);   /** CHANGE THIS **/
+DigitalInputPin top_right_bump(FEHIO::P0_1);   /** CHANGE THIS **/
+
+/** CDS CELL **/
+AnalogInputPin CDSCell(FEHIO::P1_0);   /** CHANGE THIS **/
 
 
 /*
@@ -38,9 +43,10 @@ void setWheelPercent(WheelID wheel, float percent);
 void stopAllWheels();
 /** BASIC MOVEMENT **/
 void driveStraight(DriveDirection direction, float speed, float seconds);
-void driveStraight(DriveDirection direction, float distance); //NOT IMPLEMENTED
-void driveStraight(DriveDirection direction);
+void driveStraight(DriveDirection direction, float speed, float distance); //NOT IMPLEMENTED
+void driveStraight(DriveDirection direction, float speed);
 void turn(TurnDirection direction, float speed, float seconds);
+void turn(TurnDirection direction, float speed);
 void turn90(TurnDirection direction); //NOT IMPLEMENTED
 /** DATA ACQUISTITION **/
 int getHeading(); //NOT IMPLEMENTED
@@ -58,69 +64,78 @@ void printDebug(); //NOT IMPLEMENTED
 */
 /** MOTORS **/
 void setWheelPercent(WheelID wheel, float percent) {
-	switch (wheel) {
-	  case LEFTWHEEL:
-	    left_wheel.SetPercent(percent);
-		g_left_wheel_percent = percent;
-	    break;
-	  case RIGHTWHEEL:
-	    right_wheel.SetPercent(percent);
-		g_right_wheel_percent = percent;
-	    break;
-	  default:
-	  	LCD.WriteLine("setWheelPercent ERROR");
-	}
+    switch (wheel) {
+      case LEFTWHEEL:
+        left_wheel.SetPercent(percent);
+        g_left_wheel_percent = percent;
+        break;
+      case RIGHTWHEEL:
+        right_wheel.SetPercent(percent);
+        g_right_wheel_percent = percent;
+        break;
+      default:
+        LCD.WriteLine("setWheelPercent ERROR");
+    }
 }
 void stopAllWheels() {
-	setWheelPercent(RIGHTWHEEL, 0);
-	setWheelPercent(LEFTWHEEL, 0);
+    setWheelPercent(RIGHTWHEEL, 0);
+    setWheelPercent(LEFTWHEEL, 0);
 }
 
 
 /** BASIC MOVEMENT **/
 void driveStraight(DriveDirection direction, float speed, float seconds) {
-	if direction == FORWARD {
-		setWheelPercent(RIGHTWHEEL, speed);
-		setWheelPercent(LEFTWHEEL, speed);
-	} else {
-		setWheelPercent(RIGHTWHEEL, -speed);
-		setWheelPercent(LEFTWHEEL, -speed);
-	}
-	
-	Sleep(seconds);
-	
-	stopAllWheels();
+    if (direction == FORWARD) {
+        setWheelPercent(RIGHTWHEEL, speed);
+        setWheelPercent(LEFTWHEEL, speed);
+    } else {
+        setWheelPercent(RIGHTWHEEL, -speed);
+        setWheelPercent(LEFTWHEEL, -speed);
+    }
+
+    Sleep(seconds);
+
+    stopAllWheels();
 }
-void driveStraight(DriveDirection direction) {
-	if direction == FORWARD {
-		setWheelPercent(RIGHTWHEEL, speed);
-		setWheelPercent(LEFTWHEEL, speed);
-	} else {
-		setWheelPercent(RIGHTWHEEL, -speed);
-		setWheelPercent(LEFTWHEEL, -speed);
-	}
+void driveStraight(DriveDirection direction, float speed) {
+    if (direction == FORWARD) {
+        setWheelPercent(RIGHTWHEEL, speed);
+        setWheelPercent(LEFTWHEEL, speed);
+    } else {
+        setWheelPercent(RIGHTWHEEL, -speed);
+        setWheelPercent(LEFTWHEEL, -speed);
+    }
 }
 
 void turn(TurnDirection direction, float speed, float seconds) {
-	if direction == RIGHT {
-		setWheelPercent(RIGHTWHEEL, speed);
-		setWheelPercent(LEFTWHEEL, -speed);
-	} else {
-		setWheelPercent(RIGHTWHEEL, -speed);
-		setWheelPercent(LEFTWHEEL, speed);
-	}
-	
-	Sleep(seconds);
-	
-	stopAllWheels();
+    if (direction == RIGHT) {
+        setWheelPercent(RIGHTWHEEL, -speed);
+        setWheelPercent(LEFTWHEEL, speed);
+    } else {
+        setWheelPercent(RIGHTWHEEL, speed);
+        setWheelPercent(LEFTWHEEL, -speed);
+    }
+
+    Sleep(seconds);
+
+    stopAllWheels();
+}
+void turn(TurnDirection direction, float speed) {
+    if (direction == RIGHT) {
+        setWheelPercent(RIGHTWHEEL, -speed);
+        setWheelPercent(LEFTWHEEL, speed);
+    } else {
+        setWheelPercent(RIGHTWHEEL, speed);
+        setWheelPercent(LEFTWHEEL, -speed);
+    }
 }
 
 /** DATA ACQUISTITION **/
 bool isFrontAgainstWall() {
-	return top_left_bump.Value()==false && top_right_bump.Value()==false
+    return top_left_bump.Value()==false && top_right_bump.Value()==false;
 }
 bool isBackAgainstWall() {
-	return bottom_left_bump.Value()==false && bottom_right_bump.Value()==false
+    return bottom_left_bump.Value()==false && bottom_right_bump.Value()==false;
 }
 
 /** OTHER **/
@@ -130,27 +145,31 @@ void resetSceen() {
 
 /** DEBUG **/
 char startupTest() {
-	//Test to make sure everything is reading normal values
-	//Return 0 if everything is okay
-	return 0;
+    //Test to make sure everything is reading normal values
+    //Return 0 if everything is okay
+    return 0;
 }
 
+/*
 void printDebug() {
-	//Clear screen
-	resetScreen();
-	
-	//Declaring display content
-	int length = 2;
-	std::string debugString [length] = {
-		"Motor_Left: "+std::to_string(g_left_wheel_percent),
-		"Motor_Right: "+std::to_string(right_wheel_percent)
-	};
-	
-	//Display
-	for (int i=0; i<length; i++) {
-		LCD.WriteLine(debugString[i]);
-	}
+    //Clear screen
+    resetScreen();
+
+    //Declaring display content
+    int length = 2;
+    std::string debugString [length] = {
+        "Motor_Left: "+std::to_string(g_left_wheel_percent),
+        "Motor_Right: "+std::to_string(right_wheel_percent)
+    };
+
+    //Display
+    for (int i=0; i<length; i++) {
+        LCD.WriteLine(debugString[i]);
+    }
 }
+*/
+
+
 
 
 /*
@@ -158,51 +177,68 @@ void printDebug() {
 */
 int main(void)
 {
-	//Start off by clearing screen
-	LCD.SetFontColor( FEHLCD::White );
-	resetScreen();
-	
-	//Call startup test to make sure everything is okay
-	if (startupTest() != 0) {
-		while (true) {
-			LCD.WriteLine("Startup Test Failure.")
-		}
-	}
-	
-	
-	
-	/*
-		Performance test 1
-	*/
-	
-	//Drive straight to get in front of the dumbbell 
-	float speed1 = 0;
-	float seconds1 = 0;
-	driveStraight(FORWARD, speed1, seconds1);
-	sleep(10);
-	
-	//Turn right (facing northeast -> facing east)
-	float speed2 = 0;
-	float seconds2 = 0;
-	turn(RIGHT, speed2, seconds2);
-	sleep(10);
-	
-	//Drive right until we are in front of the ramp
-	float speed3 = 0;
-	float seconds3 = 0;
-	driveStraight(FORWARD, speed3, seconds3);
-	sleep(10);
-	
-	//Turn left to face the ramp (facing east -> facing north)
-	float speed4 = 0;
-	float seconds4 = 0;
-	turn(LEFT, speed4, seconds4);
-	sleep(10);
-	
-	//Drive straight up the ramp
-	float speed5 = 0;
-	float seconds5 = 0;
-	driveStraight(FORWARD, speed5, seconds5);
-	sleep(10);
+    //Start off by clearing screen
+    LCD.Clear( FEHLCD::Black );
+    LCD.SetFontColor( FEHLCD::White );
+
+    //Call startup test to make sure everything is okay
+    /*
+    if (startupTest() != 0) {
+        while (true) {
+            LCD.WriteLine("Startup Test Failure.");
+        }
+    }
+    */
+
+
+    /*
+        Performance test 1 (big ramp)
+    */
+
+    /* FUNCTIONS TO USE:
+    driveStraight(FORWARD or BACKWARD, speed, seconds);  //drive for a number of seconds
+    driveStraight(FORWARD or BACKWARD, speed);  //turn until stopAllWheels();
+    stopAllWheels();
+    turn(LEFT or RIGHT, speed, seconds);    //turn for a number of seconds (turns both wheels)
+    turn(LEFT or RIGHT, speed);    //turn until stopAllWheels(); (turns both wheels)
+    isFrontAgainstWall();   //returns true or false
+    isBackAgainstWall();    //returns true or false
+    setWheelPercent(LEFTWHEEL or RIGHTWHEEL, percent);   //move an individual wheel
+    */
+
+    //Start from CdS Cell
+    while(CDSCell.Value() < 1.5);   /** CHANGE THIS **/
+
+    //Drive straight to get in front of the dumbbell
+    float speed1 = 0;  /** CHANGE THIS **/
+    float seconds1 = 0;   /** CHANGE THIS **/
+    driveStraight(FORWARD, speed1, seconds1);
+    Sleep(10);
+
+    //Turn right (facing northeast -> facing east)
+    float speed2 = 0;   /** CHANGE THIS **/
+    float seconds2 = 0;   /** CHANGE THIS **/
+    turn(RIGHT, speed2, seconds2);
+    Sleep(10);
+
+    //Drive right until we are hit right wall
+    float speed3 = 0;   /** CHANGE THIS **/
+    //float seconds3 = 0;
+    driveStraight(FORWARD, speed3);
+    while (!isFrontAgainstWall());
+    stopAllWheels();
+    Sleep(10);
+
+    //Turn left to face the ramp (facing east -> facing north)
+    float speed4 = 0;   /** CHANGE THIS **/
+    float seconds4 = 0;   /** CHANGE THIS **/
+    turn(LEFT, speed4, seconds4);
+    Sleep(10);
+
+    //Drive straight up the ramp
+    float speed5 = 0;   /** CHANGE THIS **/
+    float seconds5 = 0;   /** CHANGE THIS **/
+    driveStraight(FORWARD, speed5, seconds5);
+    Sleep(10);
 
 }
