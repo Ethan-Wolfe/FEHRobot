@@ -192,7 +192,7 @@ int main(void)
 
 
     /*
-        Performance test 1 (big ramp)
+        Performance test 2
     */
 
     /* FUNCTIONS TO USE:
@@ -207,50 +207,10 @@ int main(void)
     */
 
     //Start from CdS Cell
-    while(CDSCell.Value() > .75)   /** CHANGE THIS **/
-{
+    while(CDSCell.Value() > .75) {
         LCD.WriteLine(CDSCell.Value());
         Sleep(500);
-}
-    //Drive straight to get in front of the dumbbell
-    float speed1 = 60;  /** CHANGE THIS **/
-    float seconds1 = .6;   /** CHANGE THIS **/
-    driveStraight(FORWARD, speed1, seconds1);
-    Sleep(400);
+	}
 
 
-
-    //Turn right (facing northeast -> facing east)
-    float speed2 = 60;   /** CHANGE THIS **/
-    float seconds2 = 0.37;   /** CHANGE THIS **/
-    turn(RIGHT, speed2, seconds2);
-    Sleep(400);
-
-    //Drive right until we are hit right wall
-    float speed3 = 60;   /** CHANGE THIS **/
-    //float seconds3 = 0;
-    driveStraight(FORWARD, speed3);
-    while (!isFrontAgainstWall());
-    stopAllWheels();
-    Sleep(400);
-
-    float speed6 = 60;  /** CHANGE THIS **/
-    float seconds6 = .3;   /** CHANGE THIS **/
-    driveStraight(BACKWARD, speed6, seconds6);
-    Sleep(400);
-
-
-
-
-    //Turn left to face the ramp (facing east -> facing north)
-    float speed4 = 60;   /** CHANGE THIS **/
-    float seconds4 = 0.6;   /** CHANGE THIS **/
-    turn(LEFT, speed4, seconds4);
-    Sleep(1000);
-
-    //Drive straight up the ramp
-    float speed5 = 75;   /** CHANGE THIS **/
-    float seconds5 = 5.0;   /** CHANGE THIS **/
-    driveStraight(FORWARD, speed5, seconds5);
-    Sleep(400);
 }
