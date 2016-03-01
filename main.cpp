@@ -20,19 +20,19 @@ enum TurnDirection {RIGHT = 1, LEFT = 0};
 */
 /** WHEELS **/
 //FEHMotor var(FEHMotor::port, float voltage);
-FEHMotor left_wheel(FEHMotor::Motor0, 7.2);   /** CHANGE THIS **/
+FEHMotor left_wheel(FEHMotor::Motor1, 7.2);   /** CHANGE THIS **/
 int g_left_wheel_percent = 0;
-FEHMotor right_wheel(FEHMotor::Motor1, 7.2);    /** CHANGE THIS **/
+FEHMotor right_wheel(FEHMotor::Motor0, 7.2);    /** CHANGE THIS **/
 int g_right_wheel_percent = 0;
 
 /** BUMP SWITCHES **/
-DigitalInputPin bottom_left_bump(FEHIO::P1_1);   /** CHANGE THIS **/
-DigitalInputPin bottom_right_bump(FEHIO::P0_2);    /** CHANGE THIS **/
-DigitalInputPin top_left_bump(FEHIO::P0_0);   /** CHANGE THIS **/
-DigitalInputPin top_right_bump(FEHIO::P0_1);   /** CHANGE THIS **/
+DigitalInputPin bottom_left_bump(FEHIO::P0_0);   /** CHANGE THIS **/
+DigitalInputPin bottom_right_bump(FEHIO::P1_2);    /** CHANGE THIS **/
+DigitalInputPin top_left_bump(FEHIO::P2_0);   /** CHANGE THIS **/
+DigitalInputPin top_right_bump(FEHIO::P3_0);   /** CHANGE THIS **/
 
 /** CDS CELL **/
-AnalogInputPin CDSCell(FEHIO::P1_0);   /** CHANGE THIS **/
+AnalogInputPin CDSCell(FEHIO::P1_3);   /** CHANGE THIS **/
 
 
 /*
@@ -87,10 +87,10 @@ void stopAllWheels() {
 void driveStraight(DriveDirection direction, float speed, float seconds) {
     if (direction == FORWARD) {
         setWheelPercent(RIGHTWHEEL, speed);
-        setWheelPercent(LEFTWHEEL, speed);
+        setWheelPercent(LEFTWHEEL, speed-1);
     } else {
         setWheelPercent(RIGHTWHEEL, -speed);
-        setWheelPercent(LEFTWHEEL, -speed);
+        setWheelPercent(LEFTWHEEL, -speed+1);
     }
 
     Sleep(seconds);
@@ -100,20 +100,20 @@ void driveStraight(DriveDirection direction, float speed, float seconds) {
 void driveStraight(DriveDirection direction, float speed) {
     if (direction == FORWARD) {
         setWheelPercent(RIGHTWHEEL, speed);
-        setWheelPercent(LEFTWHEEL, speed);
+        setWheelPercent(LEFTWHEEL, speed-1);
     } else {
         setWheelPercent(RIGHTWHEEL, -speed);
-        setWheelPercent(LEFTWHEEL, -speed);
+        setWheelPercent(LEFTWHEEL, -speed+1);
     }
 }
 
 void turn(TurnDirection direction, float speed, float seconds) {
     if (direction == RIGHT) {
         setWheelPercent(RIGHTWHEEL, -speed);
-        setWheelPercent(LEFTWHEEL, speed);
+        setWheelPercent(LEFTWHEEL, speed+1);
     } else {
         setWheelPercent(RIGHTWHEEL, speed);
-        setWheelPercent(LEFTWHEEL, -speed);
+        setWheelPercent(LEFTWHEEL, -speed-1);
     }
 
     Sleep(seconds);
@@ -123,10 +123,10 @@ void turn(TurnDirection direction, float speed, float seconds) {
 void turn(TurnDirection direction, float speed) {
     if (direction == RIGHT) {
         setWheelPercent(RIGHTWHEEL, -speed);
-        setWheelPercent(LEFTWHEEL, speed);
+        setWheelPercent(LEFTWHEEL, speed+1);
     } else {
         setWheelPercent(RIGHTWHEEL, speed);
-        setWheelPercent(LEFTWHEEL, -speed);
+        setWheelPercent(LEFTWHEEL, -speed-1);
     }
 }
 
@@ -207,38 +207,50 @@ int main(void)
     */
 
     //Start from CdS Cell
-    while(CDSCell.Value() < 1.5);   /** CHANGE THIS **/
-
+    while(CDSCell.Value() > .75)   /** CHANGE THIS **/
+{
+        LCD.WriteLine(CDSCell.Value());
+        Sleep(500);
+}
     //Drive straight to get in front of the dumbbell
-    float speed1 = 0;  /** CHANGE THIS **/
-    float seconds1 = 0;   /** CHANGE THIS **/
+    float speed1 = 60;  /** CHANGE THIS **/
+    float seconds1 = .6;   /** CHANGE THIS **/
     driveStraight(FORWARD, speed1, seconds1);
-    Sleep(10);
+    Sleep(400);
+
+
 
     //Turn right (facing northeast -> facing east)
-    float speed2 = 0;   /** CHANGE THIS **/
-    float seconds2 = 0;   /** CHANGE THIS **/
+    float speed2 = 60;   /** CHANGE THIS **/
+    float seconds2 = 0.37;   /** CHANGE THIS **/
     turn(RIGHT, speed2, seconds2);
-    Sleep(10);
+    Sleep(400);
 
     //Drive right until we are hit right wall
-    float speed3 = 0;   /** CHANGE THIS **/
+    float speed3 = 60;   /** CHANGE THIS **/
     //float seconds3 = 0;
     driveStraight(FORWARD, speed3);
     while (!isFrontAgainstWall());
     stopAllWheels();
-    Sleep(10);
+    Sleep(400);
+
+    float speed6 = 60;  /** CHANGE THIS **/
+    float seconds6 = .3;   /** CHANGE THIS **/
+    driveStraight(BACKWARD, speed6, seconds6);
+    Sleep(400);
+
+
+
 
     //Turn left to face the ramp (facing east -> facing north)
-    float speed4 = 0;   /** CHANGE THIS **/
-    float seconds4 = 0;   /** CHANGE THIS **/
+    float speed4 = 60;   /** CHANGE THIS **/
+    float seconds4 = 0.6;   /** CHANGE THIS **/
     turn(LEFT, speed4, seconds4);
-    Sleep(10);
+    Sleep(1000);
 
     //Drive straight up the ramp
-    float speed5 = 0;   /** CHANGE THIS **/
-    float seconds5 = 0;   /** CHANGE THIS **/
+    float speed5 = 75;   /** CHANGE THIS **/
+    float seconds5 = 5.0;   /** CHANGE THIS **/
     driveStraight(FORWARD, speed5, seconds5);
-    Sleep(10);
-
+    Sleep(400);
 }
