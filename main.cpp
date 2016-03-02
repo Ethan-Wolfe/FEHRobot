@@ -3,6 +3,7 @@
 #include <FEHIO.h>
 #include <FEHUtility.h>
 #include <FEHMotor.h>
+#include <FEHRPS.h>
 
 //#include <string>
 
@@ -150,25 +151,16 @@ char startupTest() {
     return 0;
 }
 
-/*
 void printDebug() {
     //Clear screen
     resetScreen();
 
-    //Declaring display content
-    int length = 2;
-    std::string debugString [length] = {
-        "Motor_Left: "+std::to_string(g_left_wheel_percent),
-        "Motor_Right: "+std::to_string(right_wheel_percent)
-    };
-
-    //Display
-    for (int i=0; i<length; i++) {
-        LCD.WriteLine(debugString[i]);
-    }
+	LCD.WriteLine("RPS DATA:");
+	LCD.Write("X: ");
+	LCD.Write(RPS.X());
+	LCD.Write("Y: ");
+	LCD.Write(RPS.Y());
 }
-*/
-
 
 
 
@@ -181,15 +173,21 @@ int main(void)
     LCD.Clear( FEHLCD::Black );
     LCD.SetFontColor( FEHLCD::White );
 
+	//Initialize RPS
+	RPS.InitializeTouchMenu();
+
     //Call startup test to make sure everything is okay
-    /*
     if (startupTest() != 0) {
         while (true) {
             LCD.WriteLine("Startup Test Failure.");
+			Sleep(50);
         }
     }
-    */
 
+	//Wait to start
+	float touch_x, touch_y;
+	LCD.WriteLine("Touch to start");
+	while (!LCD.Touch(&touch_x, &touch_y));
 
     /*
         Performance test 2
@@ -211,6 +209,7 @@ int main(void)
         LCD.WriteLine(CDSCell.Value());
         Sleep(500);
 	}
+	
 
 
 }
