@@ -378,6 +378,7 @@ int main(void)
 	
 
     //Turn to face switches (northeast -> north)
+	//Timing based turn
     setWheelPercent(RIGHTWHEEL, 30);
     Sleep(1.2);
     stopAllWheels();
@@ -413,9 +414,6 @@ int main(void)
 
 
 	return 0;
-
-    //Turn (? -> east) and drive straight to buttons
-
-
-    //Turn (east -> north) and drive into buttons
+	
+	////BONUS////
 }
