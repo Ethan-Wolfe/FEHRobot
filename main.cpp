@@ -4,6 +4,8 @@
 #include <FEHUtility.h>
 #include <FEHMotor.h>
 #include <FEHRPS.h>
+#include <FEHServo.h>
+#include <FEHBuzzer.h>
 
 //#include <string>
 
@@ -33,11 +35,14 @@ int g_right_wheel_percent = 0;
 /** BUMP SWITCHES **/
 DigitalInputPin bottom_left_bump(FEHIO::P0_2);   /** CHANGE THIS **/
 DigitalInputPin bottom_right_bump(FEHIO::P0_3);    /** CHANGE THIS **/
-DigitalInputPin top_left_bump(FEHIO::P2_0);   /** CHANGE THIS **/
-DigitalInputPin top_right_bump(FEHIO::P3_0);   /** CHANGE THIS **/
+DigitalInputPin top_left_bump(FEHIO::P0_0);   /** CHANGE THIS **/
+DigitalInputPin top_right_bump(FEHIO::P2_0);   /** CHANGE THIS **/
 
 /** CDS CELL **/
-AnalogInputPin CDSCell(FEHIO::P0_0);   /** CHANGE THIS **/
+AnalogInputPin CDSCell(FEHIO::P0_4);   /** CHANGE THIS **/
+
+/** SERVO ARM **/
+FEHServo longarm(FEHServo::Servo3);
 
 
 /*
@@ -148,7 +153,6 @@ void adjustHeadingRPS(float heading, float motorPercent, float tolerance) {
     //See how far we are away from desired heading
     float difference = heading - RPS.Heading();
     if (difference < 0) difference *= -1; //Absolute value of difference
-    //float tolerance = 0.8;
     while (difference > tolerance) {
         printDebug();
 
@@ -167,10 +171,12 @@ void adjustHeadingRPS(float heading, float motorPercent, float tolerance) {
 
         //Turn
         if (turnRight) {
-            turn(RIGHT, motorPercent);
+            turn(RIGHT, motorPercent, .1);
         } else {
-            turn(LEFT, motorPercent);
+            turn(LEFT, motorPercent, .1);
         }
+
+        Sleep(50);
 
         //Recalculate difference
         difference = heading - RPS.Heading();
@@ -178,7 +184,7 @@ void adjustHeadingRPS(float heading, float motorPercent, float tolerance) {
 
         //Failsafe
         loopCount++;
-        if (loopCount > 150) {
+        if (loopCount > 400) {
             motorPercent *= .8;
             //encoderCounts *= .8;
             loopCount = 0;
@@ -189,6 +195,8 @@ void adjustHeadingRPS(float heading, float motorPercent, float tolerance) {
         }
 
     }
+    stopAllWheels();
+    printDebug();
 }
 
 void adjustXLocationRPS(float x_coordinate, float motorPercent, FaceDirection dirFacing) {
@@ -246,13 +254,13 @@ void adjustYLocationRPS(float y_coordinate, float motorPercent, FaceDirection di
             if(RPS.Y() > y_coordinate)
             {
                 //pulse the motors for a short duration in the correct direction
-                driveStraight(BACKWARD, motorPercent, 0.5);
+                driveStraight(BACKWARD, motorPercent, 0.1);
             }
             //We are in behind facing towards -> move forwards
             else if(RPS.Y() < y_coordinate)
             {
                 //pulse the motors for a short duration in the correct direction
-                driveStraight(FORWARD, motorPercent, 0.5);
+                driveStraight(FORWARD, motorPercent, 0.1);
             }
         }
     }
@@ -267,13 +275,13 @@ void adjustYLocationRPS(float y_coordinate, float motorPercent, FaceDirection di
             if(RPS.Y() > y_coordinate)
             {
                 //pulse the motors for a short duration in the correct direction
-                driveStraight(FORWARD, motorPercent, 0.5);
+                driveStraight(FORWARD, motorPercent, 0.1);
             }
             //We are in behind facing away -> move backwards
             else if(RPS.Y() < y_coordinate)
             {
                 //pulse the motors for a short duration in the correct direction
-                driveStraight(BACKWARD, motorPercent, 0.5);
+                driveStraight(BACKWARD, motorPercent, 0.1);
             }
         }
     }
@@ -366,54 +374,127 @@ int main(void)
     void adjustXLocationRPS(float x_coordinate, float motorPercent, NORTH or SOUTH or EAST or WEST);
     */
 
-    //Start from CdS Cell
-    /*
-    while(CDSCell.Value() > .75) {
-        LCD.WriteLine(CDSCell.Value());
-        Sleep(500);
-    }*/
-	
 
-    resetScreen();
-	
+    //Setmin and Setmax for Servo
+    longarm.SetMin(507);
+    longarm.SetMax(2438);
+    //Start from CdS Cell
+
+
+        resetScreen();
+    longarm.SetDegree(115);
+
+   while(CDSCell.Value() > .75) {
+       Sleep(100);
+
+    }
+
+
+
+
+
+
+
 
     //Turn to face switches (northeast -> north)
-	//Timing based turn
+    //Timing based turn
     setWheelPercent(RIGHTWHEEL, 30);
-    Sleep(1.2);
+    Sleep(1.3);
+    stopAllWheels();
+    Sleep(600);
+
+
+    //lower long arm
+    longarm.SetDegree(40);
+    //Drive to swtiches
+    float y_switch_bottom = 23.8;
+    adjustYLocationRPS(y_switch_bottom, 30.0, NORTH);
+
+    //Raise long arm
+    longarm.SetDegree(80);
+
+
+    //Move backwards and turn (north -> east)
+    setWheelPercent(RIGHTWHEEL, -30);
+    Sleep(1.0);
     stopAllWheels();
     Sleep(500);
-	
-
-    //Drive to swtiches
-	adjustYLocationRPS(y_coordinate, 30.0, NORTH);
-	
-	
-    //Move backwards and turn (north -> east)
-    driveStraight(BACKWARD, 30.0, 2.0);
-    adjustHeadingRPS(0, 20.0, 0.8);
+    adjustHeadingRPS(345, 25.0, 1.0);
+    Sleep(1.0);
+    longarm.SetDegree(50);
 
 
-    //Drive till you are near ramp and turn  (east -> north)
-	adjustXLocationRPS(X_coordinate, 30.0, EAST);
-    turn(LEFT, 10.0, 1.0);
-    adjustHeadingRPS(90, 10.0, 0.8);
+    //Drive till you are near ramp (right bump switch) and turn  (east -> north)
+    driveStraight(FORWARD, 40.0);
+    Sleep(2.0);
+    stopAllWheels();
+    Sleep(500);
+    adjustHeadingRPS(338, 15.0, 0.8); //slight adjustment
+    Sleep(500);
+    driveStraight(FORWARD, 40.0);
+    while (top_right_bump.Value());
+    stopAllWheels();
+
+    Sleep(100);
+    driveStraight(BACKWARD, 30.0, 0.25);
+    adjustHeadingRPS(92, 30.0, 1.1);
 
 
     //Drive up ramp
-    driveStraight(FORWARD, 75.0, 3.0);
+    driveStraight(FORWARD, 90.0);
+    int count = 0;
+    while (RPS.Y() < 44) { //drive until we get up
+        if (count > 100) { //timeout if we arnt going anywhere
+            return 0;
+        }
+    }
+    stopAllWheels();
+    Sleep(50);
+    adjustYLocationRPS(42, 20, NORTH);
 
 
     //Turn (north -> west) and drive straight to switches
-    adjustHeadingRPS(180, 10.0, 1.0);
-   	adjustXLocationRPS(X_coordinate, 30.0, WEST);
+    adjustHeadingRPS(177, 20.0, 1.0);
+    driveStraight(FORWARD, 40.0, 2.3);
+    adjustXLocationRPS(10, 30, WEST);
 
 
-    //Turn (west -> south) and press swtich
-	adjustHeadingRPS(270, 10.0, 1.0);
+    //Turn (west -> south) and press switch
+    turn(LEFT, 60, 0.6);
+    Sleep(500);
+
+    //Drive untill borh front bumpswitches are pressed
+    driveStraight(FORWARD, 40);
+    while(!isFrontAgainstWall()){}
+    stopAllWheels();
+
+    //Back up
+    driveStraight(BACKWARD, 40, 1.2);
+
+    //Lower Servo
+    longarm.SetDegree(15);
+    //Drive into switch
+    driveStraight(FORWARD,20,.8);
+    Sleep(1.0);
+    driveStraight(BACKWARD,20,.5);
+    longarm.SetDegree(80);
+    //END PERFORMANCE TEST (GOING FOR BONUS)-------------------------------
+    turn(LEFT, 60, 0.6);
+    Sleep (1.0);
+    driveStraight(FORWARD, 40, 3.4);
+    Sleep (1.0);
+    turn(LEFT, 60, .6);
+    Sleep(1.0);
+    driveStraight(FORWARD, 40, 4.0);
 
 
-	return 0;
-	
-	////BONUS////
+
+
+
+
+    return 0;
+
+    ////BONUS////
 }
+
+
