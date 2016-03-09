@@ -58,6 +58,7 @@ void turn(TurnDirection direction, float speed, float seconds);
 void turn(TurnDirection direction, float speed);
 /** ADVANCED MOVEMENT **/
 void adjustHeadingRPS(float heading, float motorPercent);
+void adjustHeadingRPS2(float heading, float motorPercent, float tolerance);
 void adjustXLocationRPS(float x_coordinate, float motorPercent, FaceDirection dirFacing);
 void adjustYLocationRPS(float y_coordinate, float motorPercent, FaceDirection dirFacing);
 void driveStraightRPS(DriveDirection direction, float speed, float distance); //NOT IMPLEMENTED
@@ -199,6 +200,77 @@ void adjustHeadingRPS(float heading, float motorPercent, float tolerance) {
     printDebug();
 }
 
+void adjustHeadingRPS2(float heading, float motorPercent, float tolerance) {
+    //Timeout
+    int timeoutCount = 0;
+    bool didTimeout = false;
+    //float lastHeading = RPS.Heading();
+
+    //Make sure we arnt going with too low of a motor power
+    if (motorPercent <= 7) {
+        didTimeout = true;
+    }
+
+    //See how far we are away from desired heading
+    float difference = heading - RPS.Heading();
+    if (difference < 0) difference *= -1; //Absolute value of difference
+    while (difference > tolerance && !didTimeout) {
+        printDebug();
+
+        //Check if we are inside the RPS zone
+        if (RPS.Heading() < 0) {
+            didTimeout = true;
+            break;
+        }
+        //int errorDistance = lastHeading - RPS.Heading();
+
+        //Find what direction we should turn to
+        bool turnRight;
+        if (RPS.Heading() < heading) {
+            //Less than desired -> Increase degrees
+            turnRight = false;
+        } else {
+            //Greater than desired -> Decrease degrees
+            turnRight = true;
+        }
+        if (difference > 180) {
+            turnRight = !turnRight;
+        }
+
+        //Turn
+        if (turnRight) {
+            turn(RIGHT, motorPercent, .1);
+        } else {
+            turn(LEFT, motorPercent, .1);
+        }
+
+        Sleep(50);
+
+        //Recalculate difference
+        difference = heading - RPS.Heading();
+        if (difference < 0) difference *= -1;
+
+        //Timeout
+        if (timeoutCount > 100) {
+            didTimeout = true;
+        } else {
+            timeoutCount++;
+        }
+    }
+
+    //Stop all the wheels and wait a few seconds to give them time to stop
+    stopAllWheels();
+    printDebug();
+    Sleep(1.5);
+
+    //Recalculate difference and recall method if we are not close enough
+    if (!didTimeout) {
+        difference = heading - RPS.Heading();
+        if (difference < 0) difference *= -1;
+        adjustHeadingRPS2(heading, motorPercent/2, tolerance);
+    }
+}
+
 void adjustXLocationRPS(float x_coordinate, float motorPercent, FaceDirection dirFacing) {
     //Facing east
     if (dirFacing == EAST) {
@@ -262,6 +334,8 @@ void adjustYLocationRPS(float y_coordinate, float motorPercent, FaceDirection di
                 //pulse the motors for a short duration in the correct direction
                 driveStraight(FORWARD, motorPercent, 0.1);
             }
+
+            Sleep(50);
         }
     }
 
@@ -283,6 +357,8 @@ void adjustYLocationRPS(float y_coordinate, float motorPercent, FaceDirection di
                 //pulse the motors for a short duration in the correct direction
                 driveStraight(BACKWARD, motorPercent, 0.1);
             }
+
+            Sleep(50);
         }
     }
 }
@@ -357,7 +433,7 @@ int main(void)
     while (!LCD.Touch(&touch_x, &touch_y));
 
     /*
-        Performance test 2
+        Performance test 3
     */
 
     /* FUNCTIONS TO USE:
@@ -378,123 +454,67 @@ int main(void)
     //Setmin and Setmax for Servo
     longarm.SetMin(507);
     longarm.SetMax(2438);
-    //Start from CdS Cell
 
+    resetScreen();
 
-        resetScreen();
+    //Set initial position for longarm
     longarm.SetDegree(115);
 
-   while(CDSCell.Value() > .75) {
+    //Start from cds cell
+    while(CDSCell.Value() > .68) {
        Sleep(100);
-
     }
 
 
-
-
-
-
-
-
-    //Turn to face switches (northeast -> north)
-    //Timing based turn
-    setWheelPercent(RIGHTWHEEL, 30);
-    Sleep(1.3);
-    stopAllWheels();
-    Sleep(600);
-
-
-    //lower long arm
-    longarm.SetDegree(40);
-    //Drive to swtiches
-    float y_switch_bottom = 23.8;
-    adjustYLocationRPS(y_switch_bottom, 30.0, NORTH);
-
-    //Raise long arm
-    longarm.SetDegree(80);
-
-
-    //Move backwards and turn (north -> east)
-    setWheelPercent(RIGHTWHEEL, -30);
-    Sleep(1.0);
-    stopAllWheels();
-    Sleep(500);
-    adjustHeadingRPS(345, 25.0, 1.0);
-    Sleep(1.0);
-    longarm.SetDegree(50);
-
-
-    //Drive till you are near ramp (right bump switch) and turn  (east -> north)
-    driveStraight(FORWARD, 40.0);
-    Sleep(2.0);
-    stopAllWheels();
-    Sleep(500);
-    adjustHeadingRPS(338, 15.0, 0.8); //slight adjustment
-    Sleep(500);
-    driveStraight(FORWARD, 40.0);
-    while (top_right_bump.Value());
-    stopAllWheels();
-
+    //Drive forward slightly to get in front of dumbbell
+    driveStraight(FORWARD, 30, 1.0);
     Sleep(100);
-    driveStraight(BACKWARD, 30.0, 0.25);
-    adjustHeadingRPS(92, 30.0, 1.1);
 
+    //Turn (northeast -> east) to face east wall
+    turn(RIGHT, 30, 0.8);
+    adjustHeadingRPS(0, 30, 1.0);
+    Sleep(100);
+
+    //Drive until bump against right wall in front of dumbbell
+    driveStraight(FORWARD, 30);
+    while (!isFrontAgainstWall());
+    stopAllWheels();
+    Sleep(100);
+
+    //Backup slighty to get apart from wall then turn (east -> south) to face dumbbell
+    driveStraight(BACKWARD, 20, 1.0);
+    turn(RIGHT, 30.0, 1.0);
+
+    //Backup
+    driveStraight(BACKWARD, 20, 1.0);
+
+    //Lower longarm
+    longarm.SetDegree(115);
+
+    //Drive forward until arm is under dumbbell
+    driveStraight(FORWARD, 20, 1.0);
+    adjustYLocationRPS(0, 20, SOUTH);
+
+    //Raise arm to pickup dumbbell
+    longarm.SetDegree(115);
+
+    //Turn (south -> north) to face ramp
+    adjustHeadingRPS(180, 30, 1.0);
 
     //Drive up ramp
-    driveStraight(FORWARD, 90.0);
-    int count = 0;
-    while (RPS.Y() < 44) { //drive until we get up
-        if (count > 100) { //timeout if we arnt going anywhere
-            return 0;
-        }
-    }
-    stopAllWheels();
-    Sleep(50);
-    adjustYLocationRPS(42, 20, NORTH);
-
-
-    //Turn (north -> west) and drive straight to switches
-    adjustHeadingRPS(177, 20.0, 1.0);
-    driveStraight(FORWARD, 40.0, 2.3);
-    adjustXLocationRPS(10, 30, WEST);
-
-
-    //Turn (west -> south) and press switch
-    turn(LEFT, 60, 0.6);
-    Sleep(500);
-
-    //Drive untill borh front bumpswitches are pressed
-    driveStraight(FORWARD, 40);
-    while(!isFrontAgainstWall()){}
+    driveStraight(FORWARD, 30);
+    while (RPS.Y() < 42);
     stopAllWheels();
 
-    //Back up
-    driveStraight(BACKWARD, 40, 1.2);
+    //Turn (north -> west)
 
-    //Lower Servo
-    longarm.SetDegree(15);
-    //Drive into switch
-    driveStraight(FORWARD,20,.8);
-    Sleep(1.0);
-    driveStraight(BACKWARD,20,.5);
-    longarm.SetDegree(80);
-    //END PERFORMANCE TEST (GOING FOR BONUS)-------------------------------
-    turn(LEFT, 60, 0.6);
-    Sleep (1.0);
-    driveStraight(FORWARD, 40, 3.4);
-    Sleep (1.0);
-    turn(LEFT, 60, .6);
-    Sleep(1.0);
-    driveStraight(FORWARD, 40, 4.0);
+    //Drive until we bump against something west of dumbbell drop off
+    //Somehow get into position to drop off.....
 
+    //Lower arm to drop off dumbbel and backup
 
+    //Bump against wall in front of switches
 
-
-
-
-    return 0;
-
-    ////BONUS////
+    //Drive east and go back down...
 }
-
 
