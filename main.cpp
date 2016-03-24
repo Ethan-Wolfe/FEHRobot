@@ -7,8 +7,6 @@
 #include <FEHServo.h>
 #include <FEHBuzzer.h>
 
-//#include <string>
-
 /*
 * * * * Constants * * * *
 */
@@ -18,6 +16,8 @@ enum DriveDirection {FORWARD = 1, BACKWARD = 0};
 enum TurnDirection {RIGHT = 1, LEFT = 0};
 
 enum FaceDirection {NORTH = 0, SOUTH = 1, EAST = 2, WEST = 3};
+
+enum LightColor {cNONE = 0, cRED = 1, cBLUE = 2};
 
 /*
 * * * * Variables * * * *
@@ -63,10 +63,12 @@ void adjustXLocationRPS(float x_coordinate, float motorPercent, FaceDirection di
 void adjustYLocationRPS(float y_coordinate, float motorPercent, FaceDirection dirFacing);
 void driveStraightRPS(DriveDirection direction, float speed, float distance); //NOT IMPLEMENTED
 void turn90RPS(TurnDirection direction); //NOT IMPLEMENTED
+void goUpRamp();
 /** DATA ACQUISTITION **/
 int getHeading(); //NOT IMPLEMENTED
 bool isFrontAgainstWall();
 bool isBackAgainstWall();
+LightColor getLightColor();
 /** OTHER **/
 void resetSceen();
 /** DEBUG **/
@@ -209,7 +211,7 @@ void adjustHeadingRPS2(float heading, float motorPercent, float tolerance) {
     int widdleCount = 0;
     bool didTimeout = false;
     bool didError = false;
-    float minSpd = 10;
+    float minSpd = 15;
     //float lastHeading = RPS.Heading();
 
     //Make sure we arnt going with too low of a motor power
@@ -285,10 +287,10 @@ void adjustHeadingRPS2(float heading, float motorPercent, float tolerance) {
     }
 }
 
-void adjustXLocationRPS(float x_coordinate, float motorPercent, FaceDirection dirFacing) {
+void adjustXLocationRPS(float x_coordinate, float motorPercent, FaceDirection dirFacing, float tolerance) {
     //Facing east
     if (dirFacing == EAST) {
-        while(RPS.X() < x_coordinate - 1 || RPS.X() > x_coordinate + 1)
+        while(RPS.X() < x_coordinate - tolerance || RPS.X() > x_coordinate + tolerance)
         {
             printDebug();
 
@@ -296,20 +298,20 @@ void adjustXLocationRPS(float x_coordinate, float motorPercent, FaceDirection di
             if(RPS.X() > x_coordinate)
             {
                 //pulse the motors for a short duration in the correct direction
-                driveStraight(BACKWARD, motorPercent, 0.5);
+                driveStraight(BACKWARD, motorPercent, 0.1);
             }
             //We are behind facing towards -> move forwards
             else if(RPS.X() < x_coordinate)
             {
                 //pulse the motors for a short duration in the correct direction
-                driveStraight(FORWARD, motorPercent, 0.5);
+                driveStraight(FORWARD, motorPercent, 0.1);
             }
         }
     }
 
     //Facing west
     if (dirFacing == WEST) {
-        while(RPS.X() < x_coordinate - 1 || RPS.X() > x_coordinate + 1)
+        while(RPS.X() < x_coordinate - tolerance || RPS.X() > x_coordinate + tolerance)
         {
             printDebug();
 
@@ -317,13 +319,13 @@ void adjustXLocationRPS(float x_coordinate, float motorPercent, FaceDirection di
             if(RPS.X() > x_coordinate)
             {
                 //pulse the motors for a short duration in the correct direction
-                driveStraight(FORWARD, motorPercent, 0.5);
+                driveStraight(FORWARD, motorPercent, 0.1);
             }
             //We are behind facing away -> move forwards
             else if(RPS.X() < x_coordinate)
             {
                 //pulse the motors for a short duration in the correct direction
-                driveStraight(BACKWARD, motorPercent, 0.5);
+                driveStraight(BACKWARD, motorPercent, 0.1);
             }
         }
     }
@@ -377,12 +379,66 @@ void adjustYLocationRPS(float y_coordinate, float motorPercent, FaceDirection di
     }
 }
 
+void goUpRamp() {
+    //Drive to right wall
+    driveStraight(FORWARD, 30);
+    while (!isFrontAgainstWall());
+    stopAllWheels();
+    Sleep(100);
+
+    //Pivot
+    driveStraight(BACKWARD, 30, 1.5);
+    Sleep(.5);
+    setWheelPercent(RIGHTWHEEL, 60);
+    Sleep (1.1);
+    stopAllWheels();
+    Sleep(.5);
+    driveStraight(BACKWARD, 30);
+    while (bottom_left_bump.Value());
+    stopAllWheels();
+    Sleep(0.5);
+    setWheelPercent(RIGHTWHEEL, -20);
+    while (bottom_right_bump.Value());
+    stopAllWheels();
+    Sleep(1.0);
+
+    //Drive up ramp
+    driveStraight(FORWARD, 45);
+    while (!isFrontAgainstWall());
+    stopAllWheels();
+    Sleep(0.2);
+
+
+    driveStraight(BACKWARD, 30, 1.5);
+    Sleep(.5);
+    setWheelPercent(RIGHTWHEEL, 60);
+    Sleep (1.1);
+    stopAllWheels();
+    Sleep(.5);
+    driveStraight(BACKWARD, 30);
+    while (!isBackAgainstWall());
+    stopAllWheels();
+    Sleep(1.0);
+
+    driveStraight(FORWARD, 30, 2.5);
+    stopAllWheels();
+}
+
 /** DATA ACQUISTITION **/
 bool isFrontAgainstWall() {
     return top_left_bump.Value()==false && top_right_bump.Value()==false;
 }
 bool isBackAgainstWall() {
     return bottom_left_bump.Value()==false && bottom_right_bump.Value()==false;
+}
+LightColor getLightColor() {
+    if (CDSCell.Value() <= 1.1) {
+        return cRED;
+    } else if (CDSCell.Value() > 1.1 && CDSCell.Value() <= 1.8) {
+        return cBLUE;
+    } else {
+        return cNONE;
+    }
 }
 
 /** OTHER **/
@@ -402,15 +458,6 @@ void printDebug() {
     //resetScreen();
 
     //Print RPS data
-    /*
-    LCD.WriteLine("RPS DATA:");
-    LCD.Write("X: ");
-    LCD.WriteLine(RPS.X());
-    LCD.Write("Y: ");
-    LCD.WriteLine(RPS.Y());
-    LCD.Write("Heading: ");
-    LCD.WriteLine(RPS.Heading());
-    */
     LCD.WriteRC("RPS DATA",0,0);
     LCD.WriteRC(RPS.X(),1,0); //update the x coordinate
     LCD.WriteRC(RPS.Y(),2,0); //update the y coordinate
@@ -440,83 +487,26 @@ void checkPorts() {
     }
 }
 
-
-void goUpRamp() {
-    //Drive to right wall
-    driveStraight(FORWARD, 30);
-    while (!isFrontAgainstWall());
-    stopAllWheels();
-    Sleep(100);
-
-    //NEW IDEA Pivot
-    driveStraight(BACKWARD, 30, 1.5);
-    Sleep(.5);
-    setWheelPercent(RIGHTWHEEL, 60);
-    Sleep (1.1);
-    stopAllWheels();
-    Sleep(.5);
-    driveStraight(BACKWARD, 30);
-    while (bottom_left_bump.Value());
-    //while (!isBackAgainstWall());
-    stopAllWheels();
-    Sleep(0.5);
-    setWheelPercent(RIGHTWHEEL, -20);
-    while (bottom_right_bump.Value());
-    stopAllWheels();
-    Sleep(1.0);
-
-    /*
-    setWheelPercent(LEFTWHEEL, -60);
-    while (bottom_right_bump.Value());
-    stopAllWheels();
-    Sleep(1.0);
-    driveStraight(FORWARD, 30, 0.65);
-    Sleep(1.0);
-    turn(LEFT, 30, 0.8);
-    Sleep(1.0);
-    driveStraight(BACKWARD, 30);
-    while (!isBackAgainstWall());
-    stopAllWheels();
-    Sleep(1.0);
-    */
-
-
-
-    //Drive up ramp
-    driveStraight(FORWARD, 45);
-    while (!isFrontAgainstWall());
-    stopAllWheels();
-    Sleep(0.2);
-
-
-    driveStraight(BACKWARD, 30, 1.5);
-    Sleep(.5);
-    setWheelPercent(RIGHTWHEEL, 60);
-    Sleep (1.1);
-    stopAllWheels();
-    Sleep(.5);
-    driveStraight(BACKWARD, 30);
-    while (!isBackAgainstWall());
-    stopAllWheels();
-    Sleep(1.0);
-
-    //Pivot
-    /*
-    setWheelPercent(LEFTWHEEL, -60);
-    while (bottom_right_bump.Value());
-    stopAllWheels();
-    Sleep(1.0);
-    driveStraight(FORWARD, 30, 0.65);
-    Sleep(1.0);
-    turn(LEFT, 30, 0.7);
-    Sleep(1.0);
-    driveStraight(BACKWARD, 30);
-    while (!isBackAgainstWall());
-    stopAllWheels();
-    Sleep(1.0);
-    */
-    driveStraight(FORWARD, 30, 2.5);
-    stopAllWheels();
+/** TEST FUNCTIONS **/
+void driveBackTest() {
+    longarm.SetDegree(29);
+    Sleep(500);
+    driveStraight(FORWARD, 20, 4.0);
+}
+void lightColorTest() {
+    LCD.Clear( FEHLCD::Black );
+    LCD.SetFontColor( FEHLCD::White );
+    while (true) {
+        LightColor col = getLightColor();
+        if (col == cRED) {
+            LCD.WriteRC("RED",1,0);
+        } else if (col == cBLUE) {
+            LCD.WriteRC("BLUE",1,0);
+        } else if (col == cNONE) {
+            LCD.WriteRC("NONE",1,0);
+        }
+        Sleep(200);
+    }
 }
 
 
@@ -547,15 +537,14 @@ int main(void)
 
     //Wait to start
     float touch_x, touch_y;
+    LCD.WriteLine("BUILD ID: 22");
     LCD.WriteLine("Touch to start");
     while (!LCD.Touch(&touch_x, &touch_y));
 
 
-
     /*
-        Performance test 3
+        Performance test 4
     */
-
     /* FUNCTIONS TO USE:
     void driveStraight(FORWARD or BACKWARD, speed, seconds);  //drive for a number of seconds
     void driveStraight(FORWARD or BACKWARD, speed);  //turn until stopAllWheels();
@@ -570,20 +559,19 @@ int main(void)
     void adjustXLocationRPS(float x_coordinate, float motorPercent, NORTH or SOUTH or EAST or WEST);
     */
 
-
-
     resetScreen();
 
     //Set initial position for longarm
     longarm.SetDegree(115);
 
-
     //Start from cds cell
-    while(CDSCell.Value() > .8) {
+    while(CDSCell.Value() > 0.9) {
         LCD.WriteLine (CDSCell.Value());
-       Sleep(100);
+        Sleep(100);
     }
 
+
+    //**** BEGIN RUN ****//
 
 
     //Drive forward slightly to get in front of dumbbell
@@ -609,89 +597,128 @@ int main(void)
     Sleep(50);
 
     //Backup
-    adjustYLocationRPS(19, 20, SOUTH, 1.0);
+    adjustYLocationRPS(17.5, 20, SOUTH, 0.8);
     Sleep(1.0);
 
-    //Lower longarm
-    longarm.SetDegree(20);
+    //Lower longarm to dumbbell height
+    longarm.SetDegree(12);
     Sleep(0.5);
 
-    //Adjust heading
+    //Adjust heading to face dumbbell
     adjustHeadingRPS2(270, 20, 0.8);
     Sleep(250);
 
     //Drive forward until arm is under dumbbell
-    adjustYLocationRPS(15.3, 20, SOUTH, 0.8);
+    adjustYLocationRPS(15, 20, SOUTH, 0.8);
     Sleep(250);
 
     //Raise arm to pickup dumbbell
-    longarm.SetDegree(85);
+    longarm.SetDegree(110);
     Sleep(0.5);
 
-    //Turn (south -> north) to face ramp
-    adjustHeadingRPS2(90, 20, 0.8);
-    Sleep(250);
-
     //Get close to ramp
-    driveStraight(FORWARD, 30, 1.5);
-    adjustYLocationRPS(20, 20, NORTH, 0.8);
+    driveStraight(BACKWARD, 30, 1.5);
+    adjustYLocationRPS(25, 20, SOUTH, 0.8);
     Sleep(250);
 
-    //Adjust heading
+    //Adjust heading (north -> east)
+    adjustHeadingRPS2(269, 20, 0.8);
+    Sleep(1.0);
+
+    //Lift up dumbbell
+    longarm.SetDegree(140);
+    Sleep(0.5);
+
+    //Drive up ramp
+    /*
+    goUpRamp();
+    Sleep(200);
+    */
+    driveStraight(BACKWARD, 60, 3);
+    Sleep(1.0);
+    longarm.SetDegree(110);
+    Sleep(1.0);
+    adjustHeadingRPS2(270, 30, 1.0);
+    Sleep(1.0);
+    //adjustYLocationRPS(45.5, 30, SOUTH, 1.0);
+
+    //Adjust heading (? -> east)
     adjustHeadingRPS2(0, 20, 1);
     Sleep(200);
 
-    //Drive up ramp
-    goUpRamp();
-
-    //Drive until rps zone
-    driveStraight(FORWARD, 40);
-    while (RPS.Heading() < 0);
+    //Adjust x position to be in line with buttons
+    adjustXLocationRPS(26.5, 20, EAST, 1.0);
     Sleep(200);
 
-    //Adjust heading
-    adjustHeadingRPS2(177, 20, 1.0);
+    //Turn to face buttons
+    adjustHeadingRPS2(90,20,1);
+    Sleep(200);
 
-    //Drive till we hit a wall
-    driveStraight(FORWARD, 40);
-    while (!isFrontAgainstWall());
-    stopAllWheels();
-    Sleep(250);
+    //Drive forward to get close to buttons
+    driveStraight(FORWARD, 30, 2.5);
+    adjustYLocationRPS(62, 30, NORTH, 1.0);
+    Sleep(200);
+    adjustHeadingRPS2(90, 20, 1.0);
+    Sleep(200);
+
+    //Check button color
+    LightColor buttonColor;
+    buttonColor = getLightColor();
+    LCD.WriteRC(CDSCell.Value(),6,0);
+
+    if (buttonColor == cRED) {
+        LCD.WriteRC("Red",5,0);
+
+        //Adjust arm to be in line with button
+        longarm.SetDegree(135);
+        Sleep(1.0);
+
+        //Adjust y position to press button and wait 5 seconds
+        driveStraight(FORWARD, 15, 2);
+        Sleep(5.5);
+    }
+
+    if (buttonColor == cBLUE) {
+        LCD.WriteRC("Blue",5,0);
+
+        //Adjust y position to press button and wait 5 seconds
+        driveStraight(FORWARD, 15, 2);
+        Sleep(5.5);
+
+    }
+
+    if (buttonColor == cNONE) {
+        while (true) {
+            LCD.WriteLine("NO COLOR FOUND");
+        }
+    }
 
     //Backup
-    driveStraight(BACKWARD, 30, 1.05);
-    Sleep(250);
+    longarm.SetDegree(110);
+    driveStraight(BACKWARD, 30, 1.5);
+    Sleep(200);
+    adjustHeadingRPS2(90, 20, 1.0);
 
-    //Turn (north)
-    turn(RIGHT, 30, 1.35);
-    Sleep(1.0);
+    //Navigate to ramp
+    adjustYLocationRPS(42, 30, NORTH, 1.0);
 
-    //Drop arm
-    longarm.SetDegree(38);
-
-    //Back up and leave supplies behind
-    driveStraight(BACKWARD, 15, 1.6);
-
-
-
-
-    //BONUS
-    longarm.SetDegree(47);
-    turn(RIGHT, 30, 1.1);
-    driveStraight(FORWARD, 30);
-    while (RPS.X() < 22);
+    //Go down ramp
+    driveStraight(BACKWARD, 50, 3.0);
     stopAllWheels();
-    Sleep(300);
-    driveStraight(FORWARD, 15);
-    while (RPS.X() < 26.2);
-    stopAllWheels();
-    Sleep(300);
+    adjustHeadingRPS2(90, 30, 1.0);
+    Sleep(200);
+    adjustYLocationRPS(21.5, 30, NORTH, 1.0);
 
-    adjustHeadingRPS2(90, 25, .9);
-    Sleep(300);
-
-    driveStraight(BACKWARD, 40, 5.0);
+    //Adjust heading and drive to end buton
+    adjustHeadingRPS2(190, 30, 0.8);
+    Sleep(200);
+    driveStraight(FORWARD, 30, 1.5);
+    Sleep(200);
+    adjustHeadingRPS2(225, 30, 0.8);
+    Sleep(200);
+    driveStraight(FORWARD, 45);
 
     return 0;
+
 }
 
