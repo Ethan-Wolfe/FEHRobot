@@ -670,7 +670,7 @@ int main(void)
         LCD.WriteRC("Red",5,0);
 
         //Adjust arm to be in line with button
-        longarm.SetDegree(135);
+        longarm.SetDegree(125);
         Sleep(1.0);
 
         //Adjust y position to press button and wait 5 seconds
