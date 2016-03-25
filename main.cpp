@@ -47,7 +47,7 @@ AnalogInputPin CDSCell(FEHIO::P0_0);   /** CHANGE THIS **/
 FEHServo longarm(FEHServo::Servo0);   /** CHANGE THIS **/
 
 /** SHAFT ENCODERS **/
-DigitalEncoder right_encoder(FEHIO::P0_0);   /** CHANGE THIS **/
+DigitalEncoder right_encoder(FEHIO::P3_0);   /** CHANGE THIS **/
 DigitalEncoder left_encoder(FEHIO::P0_1);   /** CHANGE THIS **/
 
 
@@ -560,6 +560,17 @@ void encoderTest() {
     //void driveStraightEnc(DriveDirection direction, float speed, float distance);
     //void turnEnc(TurnDirection direction, float speed, float distance);
     //void turn90Enc(TurnDirection direction, float speed);
+
+    resetScreen();
+
+    //Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    while (true) {
+        LCD.WriteRC("Encoder",0,0);
+        LCD.WriteRC(right_encoder.Counts(),1,0);
+    }
 }
 
 
@@ -762,6 +773,8 @@ int main(void)
 
     //Tests
     encoderTest();
+
+    return 0;
 
     //Initialize RPS
     RPS.InitializeTouchMenu();
