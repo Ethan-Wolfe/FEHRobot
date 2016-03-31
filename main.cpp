@@ -21,6 +21,10 @@ enum LightColor {cNONE = 0, cRED = 1, cBLUE = 2};
 
 //4.3654 encoder counts = 1 inch
 
+int redSwitchDir;
+int blueSwitchDir;
+int whiteSwitchDir;
+
 /*
 * * * * Variables * * * *
 */
@@ -35,13 +39,13 @@ FEHMotor right_wheel(FEHMotor::Motor0, 7.2);    /** CHANGE THIS **/
 int g_right_wheel_percent = 0;
 
 /** BUMP SWITCHES **/
-DigitalInputPin bottom_left_bump(FEHIO::P2_2);   /** CHANGE THIS **/
+DigitalInputPin bottom_left_bump(FEHIO::P0_6);   /** CHANGE THIS **/
 DigitalInputPin bottom_right_bump(FEHIO::P2_0);    /** CHANGE THIS **/
 DigitalInputPin top_left_bump(FEHIO::P2_4);   /** CHANGE THIS **/
 DigitalInputPin top_right_bump(FEHIO::P2_6);   /** CHANGE THIS **/
 
 /** CDS CELL **/
-AnalogInputPin CDSCell(FEHIO::P0_0);   /** CHANGE THIS **/
+AnalogInputPin CDSCell(FEHIO::P3_0);   /** CHANGE THIS **/
 
 /** SERVO ARM **/
 FEHServo longarm(FEHServo::Servo0);   /** CHANGE THIS **/
@@ -98,7 +102,7 @@ void setWheelPercent(WheelID wheel, float percent) {
         g_left_wheel_percent = percent;
         break;
       case RIGHTWHEEL:
-        right_wheel.SetPercent(percent);
+        right_wheel.SetPercent(percent*1.02);
         g_right_wheel_percent = percent;
         break;
       default:
@@ -590,7 +594,7 @@ void doBottomSwitches() {
     Sleep(1.9);
     stopAllWheels();
     driveStraight(FORWARD, 30);
-    while (RPS.X() > 8.5);
+    while (RPS.X() > 8);
     stopAllWheels();
     adjustHeadingRPS2(90, 20, 1.0);
 
@@ -606,8 +610,11 @@ void doBottomSwitches() {
     //Decide which switch to press
     //red - left, white - middle, blue - right
     //1 - forward, 2 - backwards
+    redSwitchDir = RPS.RedSwitchDirection();
+    blueSwitchDir = RPS.BlueSwitchDirection();
+    whiteSwitchDir = RPS.WhiteSwitchDirection();
 
-    if (/*RPS.WhiteSwitchDirection()*/ 1 == 1) {
+    if (whiteSwitchDir == 2) {
         //Set arm height
         longarm.SetDegree(60);
 
@@ -618,7 +625,7 @@ void doBottomSwitches() {
         adjustYLocationRPS(22, 20, NORTH, 0.8);
     }
 
-    if (/*RPS.BlueSwitchDirection()*/ 0 == 1) {
+    if (blueSwitchDir == 2) {
         //Turn right
         turn(RIGHT, 30, 0.5);
         adjustHeadingRPS2(60, 20, 1.2);
@@ -633,10 +640,10 @@ void doBottomSwitches() {
         adjustYLocationRPS(22, 20, NORTH, 0.8);
     }
 
-    if (/*RPS.RedSwitchDirection()*/ 1 == 1) {
+    if (redSwitchDir == 2) {
         //Turn left
         turn(LEFT, 30, 0.5);
-        adjustHeadingRPS2(120, 20, 1.2);
+        adjustHeadingRPS2(118, 20, 1.2);
 
         //Set arm height
         longarm.SetDegree(60);
@@ -708,14 +715,14 @@ void doMoveToTop() {
 
     //Adjust heading (north -> east)
     adjustHeadingRPS2(269, 20, 0.8);
-    Sleep(1.0);
+    Sleep(100);
 
     //Lift up dumbbell
     longarm.SetDegree(140);
     Sleep(0.5);
 
     //Drive up ramp
-    driveStraight(BACKWARD, 60, 3);
+    driveStraight(BACKWARD, 70, 2.5);
     Sleep(1.0);
 
     //Lower longarm and turn south
@@ -751,8 +758,6 @@ void doButtons() {
     Sleep(200);
     adjustHeadingRPS2(90, 20, 1.0);
     Sleep(200);
-
-    return;
 
     //Check button color
     LightColor buttonColor;
@@ -798,7 +803,7 @@ void doDumbbellDrop() {
 
     //Turn (north -> west)
     turn(LEFT, 30, 1.0);
-    adjustHeadingRPS2(180, 20, 1.0);
+    adjustHeadingRPS2(180, 20, 0.8);
     Sleep(200);
 
     //Drive straight till bump against wall
@@ -815,25 +820,47 @@ void doDumbbellDrop() {
     turn(RIGHT, 30, 1.5);
     Sleep(200);
 
-    //Drive straight a bit
-    //driveStraight(FORWARD, 30, 0.5);
-    //Sleep(200);
+    //Bump against dropoff
+    driveStraight(FORWARD, 40);
+    while (!(top_left_bump.Value() == 0 || top_right_bump.Value() == 0));
+    Sleep(0.5);
+    stopAllWheels();
+    Sleep(200);
+
+    //Backup a little bit
+    LCD.WriteRC(RPS.X(),8,0);
+    driveStraight(BACKWARD, 30, 1.0);
 
     //Drop off dumbbell
     longarm.SetDegree(20);
     Sleep(0.5);
 
-    //Drive backwards to drop off dumbbel
-    driveStraight(BACKWARD, 30, 1.5);
+    //Drive backwards to drop off dumbbell
+    driveStraight(BACKWARD, 30, 1.0);
     Sleep(200);
 
+    //Raise longarm back up
     longarm.SetDegree(110);
     Sleep(200);
 }
 
 void doTopSwitches() {
+    //Bump back against wall
+    setWheelPercent(LEFTWHEEL, -40);
+    Sleep(0.5);
+    stopAllWheels();
+    setWheelPercent(RIGHTWHEEL, -40);
+    while (bottom_left_bump.Value() == 1);
+    stopAllWheels();
+    driveStraight(BACKWARD, 40);
+    while (!isBackAgainstWall());
+    stopAllWheels();
+
+    //Drive straight a little bit
+    driveStraight(FORWARD, 40, 0.8);
+
     //Turn 180 to be facing toward switches
-    turn(RIGHT, 40, 2.1);
+    turn(RIGHT, 40, 1.8);
     Sleep(200);
 
     //Drive straight till bump against wall
@@ -864,6 +891,12 @@ void doMoveToBottomAndEnd() {
     driveStraight(BACKWARD, 50, 2.0);
 
     //Drive to finish button
+    while (RPS.Y() > 23);
+    stopAllWheels();
+
+    //Turn to face left wall
+    turn(RIGHT, 40, 1.0);
+    adjustHeadingRPS2(180, 20, 1.0);
 }
 
 /*
@@ -871,6 +904,11 @@ void doMoveToBottomAndEnd() {
 */
 int main(void)
 {
+    driveStraight(FORWARD, 30, 3);
+    Sleep(2.0);
+    driveStraight(FORWARD, 60, 2);
+    return 0;
+
     /*
         Individual competition
     */
@@ -903,13 +941,6 @@ int main(void)
     //Tests
     //encoderTest();
 
-    /*
-    while (true) {
-        LCD.WriteLine (CDSCell.Value());
-        Sleep(100);
-    }
-    */
-
     //Initialize RPS
     RPS.InitializeTouchMenu();
 
@@ -926,6 +957,7 @@ int main(void)
     longarm.SetMax(2438);
 
     //Wait to start
+    Sleep(2.0);
     float touch_x, touch_y;
     LCD.WriteLine("BUILD ID: 37");
     LCD.WriteLine("Touch to start");
@@ -937,12 +969,10 @@ int main(void)
     longarm.SetDegree(115);
 
     //Start from cds cell
-    /*
     while(CDSCell.Value() > 0.9) {
         LCD.WriteLine (CDSCell.Value());
         Sleep(100);
     }
-    */
 
     //----**** BEGIN RUN ****----//
 
@@ -964,13 +994,6 @@ int main(void)
     //**** TOP BUTTONS  ****//
     doTopSwitches();
 
-    while (true) {
-        printDebug();
-    }
-    return 0;
-
     //**** MOVE TO BOTTOM ****//
     doMoveToBottomAndEnd();
-
-    //**** FINISH ****//
 }
