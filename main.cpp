@@ -47,8 +47,8 @@ AnalogInputPin CDSCell(FEHIO::P0_0);   /** CHANGE THIS **/
 FEHServo longarm(FEHServo::Servo0);   /** CHANGE THIS **/
 
 /** SHAFT ENCODERS **/
-DigitalEncoder right_encoder(FEHIO::P3_0);   /** CHANGE THIS **/
-DigitalEncoder left_encoder(FEHIO::P0_1);   /** CHANGE THIS **/
+DigitalEncoder right_encoder(FEHIO::P3_2);   /** CHANGE THIS **/
+DigitalEncoder left_encoder(FEHIO::P3_0);   /** CHANGE THIS **/
 
 
 /*
@@ -94,7 +94,7 @@ void checkPorts();
 void setWheelPercent(WheelID wheel, float percent) {
     switch (wheel) {
       case LEFTWHEEL:
-        left_wheel.SetPercent(percent*1.06);
+        left_wheel.SetPercent(percent);
         g_left_wheel_percent = percent;
         break;
       case RIGHTWHEEL:
@@ -117,9 +117,9 @@ void stopAllWheels() {
 void driveStraight(DriveDirection direction, float speed, float seconds) {
     if (direction == FORWARD) {
         setWheelPercent(RIGHTWHEEL, speed);
-        setWheelPercent(LEFTWHEEL, speed-1);
+        setWheelPercent(LEFTWHEEL, speed);
     } else {
-        setWheelPercent(RIGHTWHEEL, -speed-1);
+        setWheelPercent(RIGHTWHEEL, -speed);
         setWheelPercent(LEFTWHEEL, -speed);
     }
 
@@ -130,9 +130,9 @@ void driveStraight(DriveDirection direction, float speed, float seconds) {
 void driveStraight(DriveDirection direction, float speed) {
     if (direction == FORWARD) {
         setWheelPercent(RIGHTWHEEL, speed);
-        setWheelPercent(LEFTWHEEL, speed-1);
+        setWheelPercent(LEFTWHEEL, speed);
     } else {
-        setWheelPercent(RIGHTWHEEL, -speed-1);
+        setWheelPercent(RIGHTWHEEL, -speed);
         setWheelPercent(LEFTWHEEL, -speed);
     }
 }
@@ -477,7 +477,11 @@ void turnEnc(TurnDirection direction, float speed, float distance) {
     }
 
     //while the average of the left and right encoder are less than counts, keep running motor
-    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
+    while((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts) {
+        LCD.WriteRC("Encoder",0,0);
+        LCD.WriteRC(right_encoder.Counts(),1,0);
+        LCD.WriteRC(left_encoder.Counts(),2,0);
+    }
 
     //turn off motors
     stopAllWheels();
@@ -567,9 +571,12 @@ void encoderTest() {
     right_encoder.ResetCounts();
     left_encoder.ResetCounts();
 
+    turn90Enc(RIGHT, 20);
+
     while (true) {
         LCD.WriteRC("Encoder",0,0);
         LCD.WriteRC(right_encoder.Counts(),1,0);
+        LCD.WriteRC(left_encoder.Counts(),2,0);
     }
 }
 
@@ -579,30 +586,84 @@ void doBottomSwitches() {
     //**** BOTTOM SWITCHES ****//
 
     //Turn to face switches
+    setWheelPercent(RIGHTWHEEL, 40);
+    Sleep(1.9);
+    stopAllWheels();
+    driveStraight(FORWARD, 30);
+    while (RPS.X() > 8.5);
+    stopAllWheels();
+    adjustHeadingRPS2(90, 20, 1.0);
 
     //Drive till bump against wall
     driveStraight(FORWARD, 40);
     while (!isFrontAgainstWall());
     stopAllWheels();
 
-    //Do stuff...
+    //Backup to a certain spot
+    driveStraight(BACKWARD, 20, 1.0);
+    adjustYLocationRPS(22, 20, NORTH, 0.8);
+
+    //Decide which switch to press
+    //red - left, white - middle, blue - right
+    //1 - forward, 2 - backwards
+
+    if (/*RPS.WhiteSwitchDirection()*/ 1 == 1) {
+        //Set arm height
+        longarm.SetDegree(60);
+
+        //Drive forward
+        driveStraight(FORWARD, 30, 1);
+
+        //Backup
+        adjustYLocationRPS(22, 20, NORTH, 0.8);
+    }
+
+    if (/*RPS.BlueSwitchDirection()*/ 0 == 1) {
+        //Turn right
+        turn(RIGHT, 30, 0.5);
+        adjustHeadingRPS2(60, 20, 1.2);
+
+        //Set arm height
+        longarm.SetDegree(60);
+
+        //Drive forward
+        driveStraight(FORWARD, 30, 1);
+
+        //Backup
+        adjustYLocationRPS(22, 20, NORTH, 0.8);
+    }
+
+    if (/*RPS.RedSwitchDirection()*/ 1 == 1) {
+        //Turn left
+        turn(LEFT, 30, 0.5);
+        adjustHeadingRPS2(120, 20, 1.2);
+
+        //Set arm height
+        longarm.SetDegree(60);
+
+        //Drive forward
+        driveStraight(FORWARD, 30, 1);
+
+        //Backup
+        adjustYLocationRPS(22, 20, NORTH, 0.8);
+    }
 }
 
 void doDumbbell() {
     //**** DUMBBELL ****//
 
-    //Backup to get away from wall
-    driveStraightEnc(BACKWARD, 30, 0.5);
-
     //Turn (north -> southeast) to face towards dumbbell
-    turn90Enc(RIGHT, 30);
-    adjustHeadingRPS2(300, 20, 1.0);
+    turn(RIGHT, 40, 1.5);
+    adjustHeadingRPS2(315, 20, 1.0);
 
     //Drive for a little bit
-    driveStraightEnc(FORWARD, 40, 2);
+    driveStraight(FORWARD, 40);
+    while (RPS.Y() > 16.5);
+    stopAllWheels();
 
     //Turn to the right to face right wall
-    adjustHeadingRPS2(0, 20, 1.0);
+    turn(LEFT, 30, 0.7);
+    adjustHeadingRPS2(0, 20, 1.3);
 
     //Drive until bump against right wall in front of dumbbell
     driveStraight(FORWARD, 40);
@@ -610,11 +671,11 @@ void doDumbbell() {
     stopAllWheels();
 
     //Backup slighty to get apart from wall then turn (east -> south) to face dumbbell
-    driveStraightEnc(BACKWARD, 30, 1.0);
+    driveStraight(BACKWARD, 30, 1.0);
     Sleep(100);
-    turnEnc(RIGHT, 30.0, 1.0);
-    adjustHeadingRPS2(270, 25, 1.0);
-    Sleep(50);
+    turn(RIGHT, 30.0, 1.0);
+    adjustHeadingRPS2(270, 20, 1.0);
+    Sleep(100);
 
     //Backup
     adjustYLocationRPS(17.5, 20, SOUTH, 0.8);
@@ -638,10 +699,10 @@ void doDumbbell() {
 }
 
 void doMoveToTop() {
-    //**** MOVE TO TOP ****//
+    //**** MOVE TO TOP ****//    
 
     //Get close to ramp
-    driveStraightEnc(BACKWARD, 4, 2);
+    driveStraight(BACKWARD, 40, 1.5);
     adjustYLocationRPS(26, 20, SOUTH, 0.8);
     Sleep(250);
 
@@ -666,15 +727,21 @@ void doMoveToTop() {
 void doButtons() {
     //**** BUTTONS ****//
 
-    //Adjust heading (? -> east)
-    adjustHeadingRPS2(0, 20, 1);
-    Sleep(200);
+    if (!(RPS.X() > 25.5 && RPS.X() < 27)) {
+        //Adjust heading (? -> east)
+        turn(LEFT, 30, 1.0);
+        adjustHeadingRPS2(0, 20, 1);
+        Sleep(200);
 
-    //Adjust x position to be in line with buttons
-    adjustXLocationRPS(26.5, 20, EAST, 1.0);
-    Sleep(200);
+        //Adjust x position to be in line with buttons
+        adjustXLocationRPS(26.5, 20, EAST, 1.0);
+        Sleep(200);
+    } else {
+        turn(LEFT, 30, 1.0);
+    }
 
     //Turn to face buttons
+    turn(LEFT, 30, 1.0);
     adjustHeadingRPS2(90,20,1);
     Sleep(200);
 
@@ -684,6 +751,8 @@ void doButtons() {
     Sleep(200);
     adjustHeadingRPS2(90, 20, 1.0);
     Sleep(200);
+
+    return;
 
     //Check button color
     LightColor buttonColor;
@@ -723,18 +792,78 @@ void doButtons() {
 
 void doDumbbellDrop() {
     //Backup to get in line with wall adjacent to dumbbell drop
+    driveStraight(BACKWARD, 40, 2.0);
+    adjustYLocationRPS(47, 30, NORTH, 1.0);
+    Sleep(200);
 
     //Turn (north -> west)
+    turn(LEFT, 30, 1.0);
+    adjustHeadingRPS2(180, 20, 1.0);
+    Sleep(200);
 
     //Drive straight till bump against wall
+    driveStraight(FORWARD, 60);
+    while (!isFrontAgainstWall());
+    stopAllWheels();
+    Sleep(200);
 
     //Backup
+    driveStraight(BACKWARD, 30, 1.1);
+    Sleep(200);
 
-    //Pivot?
+    //Turn to face the dropoff
+    turn(RIGHT, 30, 1.5);
+    Sleep(200);
 
-    //Drive straight
+    //Drive straight a bit
+    //driveStraight(FORWARD, 30, 0.5);
+    //Sleep(200);
 
     //Drop off dumbbell
+    longarm.SetDegree(20);
+    Sleep(0.5);
+
+    //Drive backwards to drop off dumbbel
+    driveStraight(BACKWARD, 30, 1.5);
+    Sleep(200);
+
+    longarm.SetDegree(110);
+    Sleep(200);
+}
+
+void doTopSwitches() {
+    //Turn 180 to be facing toward switches
+    turn(RIGHT, 40, 2.1);
+    Sleep(200);
+
+    //Drive straight till bump against wall
+    driveStraight(FORWARD, 30);
+    while (!isFrontAgainstWall());
+    stopAllWheels();
+    Sleep(200);
+
+    //Backup a little bit
+    driveStraight(BACKWARD, 30, 1.5);
+    Sleep(200);
+
+    //Turn (south -> east)
+    turn(LEFT, 40, 1.0);
+
+    driveStraight(FORWARD, 60);
+    while (RPS.X() < 24);
+    stopAllWheels();
+}
+
+void doMoveToBottomAndEnd() {
+    //Turn towards ramp
+    turn(LEFT, 40, 1.0);
+    adjustHeadingRPS2(90, 20, 1.0);
+    Sleep(200);
+
+    //Drive down
+    driveStraight(BACKWARD, 50, 2.0);
+
+    //Drive to finish button
 }
 
 /*
@@ -772,9 +901,14 @@ int main(void)
     //checkPorts();
 
     //Tests
-    encoderTest();
+    //encoderTest();
 
-    return 0;
+    /*
+    while (true) {
+        LCD.WriteLine (CDSCell.Value());
+        Sleep(100);
+    }
+    */
 
     //Initialize RPS
     RPS.InitializeTouchMenu();
@@ -793,7 +927,7 @@ int main(void)
 
     //Wait to start
     float touch_x, touch_y;
-    LCD.WriteLine("BUILD ID: 22");
+    LCD.WriteLine("BUILD ID: 37");
     LCD.WriteLine("Touch to start");
     while (!LCD.Touch(&touch_x, &touch_y));
 
@@ -827,9 +961,16 @@ int main(void)
     //**** DUMBBELL DROP ****//
     doDumbbellDrop();
 
-    //**** TOP BUTTONS ? ****//
+    //**** TOP BUTTONS  ****//
+    doTopSwitches();
+
+    while (true) {
+        printDebug();
+    }
+    return 0;
 
     //**** MOVE TO BOTTOM ****//
+    doMoveToBottomAndEnd();
 
     //**** FINISH ****//
 }
