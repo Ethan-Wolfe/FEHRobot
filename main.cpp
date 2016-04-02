@@ -830,14 +830,17 @@ void doMoveToTop() {
 void doButtons() {
     //**** BUTTONS ****//
 
-    if (!(RPS.X() > 25.5 && RPS.X() < 26.5)) {
-        //Adjust heading (? -> east)
+	//Check if we need to adjust our x position for the buttons
+	float buttonX = rightWall_x_eface - 2  //Should be around x=26
+    if (RPS.X() >= buttonX + 1 || RPS.X() <= buttonX -1) {
+	
+        //Adjust heading (south -> east)
         turn(LEFT, 40, 1.0);
-        adjustHeadingRPS2(0, 20, 1.5);
+        adjustHeadingRPS2(0, 20, 1.1);
         Sleep(200);
 
         //Adjust x position to be in line with buttons
-        adjustXLocationRPS(26.0, 25, EAST, .6);
+        adjustXLocationRPS(buttonX, 20, EAST, .6);
         Sleep(200);
     }
     else {
@@ -846,26 +849,25 @@ void doButtons() {
 
     //Turn to face buttons
     turn(LEFT, 40, 1.0);
-    adjustHeadingRPS2(bumpheading,15,.6);
+    adjustHeadingRPS2(90, 20, .8);
     Sleep(200);
 
-    //Drive forward to get close to buttons
+    //Drive forward for a little then stop to adjust heading again
     driveStraight(FORWARD, 45, 1.7);
-    Sleep(200);
-    adjustHeadingRPS2(bumpheading,15,.6);
+    adjustHeadingRPS2(90, 20, 0.8);
+	
+	//Drive forward to get close to the buttons
     driveStraight(FORWARD, 45, .9);
     adjustYLocationRPS(61, 30, NORTH, 1.0);
-    Sleep(200);
-    //adjustHeadingRPS2(90, 20, 1.0);
-    Sleep(200);
+	
+	//Adjust heading to north
+	//adjustHeadingRPS2(90, 20, 0.8);
 
     //Check button color
     LightColor buttonColor;
     buttonColor = getLightColor();
 
     if (buttonColor == cRED) {
-        //LCD.WriteRC("Red",5,0);
-
         //Adjust arm to be in line with button
         longarm.SetDegree(130);
         Sleep(1.0);
@@ -876,7 +878,7 @@ void doButtons() {
     }
 
     if (buttonColor == cBLUE || buttonColor == cNONE) {
-        //LCD.WriteRC("Blue",5,0);
+		//Adjust arm so it doesent accidentally press red button
 
         //Adjust y position to press button and wait 5 seconds
         driveStraight(FORWARD, 40, 2);
@@ -884,12 +886,11 @@ void doButtons() {
 
     }
 
-    //Backup for a sec
+    //Backup to stop pressing switches
     driveStraight(BACKWARD, 30, 1.5);
 
-    longarm.SetDegree(95);
-
-
+	//Raise arm back up
+    longarm.SetDegree(110);
 }
 
 void doDumbbellDrop() {
