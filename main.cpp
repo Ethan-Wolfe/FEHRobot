@@ -490,7 +490,6 @@ char startupTest() {
     //Return 0 if everything is okay
     return 0;
 }
-
 void printDebug() {
     //Clear screen
     //resetScreen();
@@ -503,7 +502,6 @@ void printDebug() {
 
     //Print error list
 }
-
 void checkPorts() {
     setWheelPercent(RIGHTWHEEL, 15);
     Sleep(100);
@@ -522,26 +520,6 @@ void checkPorts() {
         LCD.WriteRC(top_right_bump.Value(),1,0);
         LCD.WriteRC(bottom_left_bump.Value(),2,0);
         LCD.WriteRC(bottom_right_bump.Value(),3,0);
-    }
-}
-
-void encoderTest() {
-    //void driveStraightEnc(DriveDirection direction, float speed, float distance);
-    //void turnEnc(TurnDirection direction, float speed, float distance);
-    //void turn90Enc(TurnDirection direction, float speed);
-
-    resetScreen();
-
-    //Reset encoder counts
-    right_encoder.ResetCounts();
-    left_encoder.ResetCounts();
-
-    turn90Enc(RIGHT, 20);
-
-    while (true) {
-        LCD.WriteRC("Encoder",0,0);
-        LCD.WriteRC(right_encoder.Counts(),1,0);
-        LCD.WriteRC(left_encoder.Counts(),2,0);
     }
 }
 
@@ -1129,26 +1107,8 @@ void doMoveToBottomAndEnd2() {
 int main(void)
 {
 
-
-
     /*
-        Individual competition
-    */
-    /* FUNCTIONS TO USE:
-    void driveStraight(FORWARD or BACKWARD, speed, seconds);  //drive for a number of seconds
-    void driveStraight(FORWARD or BACKWARD, speed);  //turn until stopAllWheels();
-    void stopAllWheels();
-    void turn(LEFT or RIGHT, speed, seconds);    //turn for a number of seconds (turns both wheels)
-    void turn(LEFT or RIGHT, speed);    //turn until stopAllWheels(); (turns both wheels)
-    bool isFrontAgainstWall();   //returns true or false
-    bool isBackAgainstWall();    //returns true or false
-    void setWheelPercent(LEFTWHEEL or RIGHTWHEEL, percent);   //move an individual wheel
-    void adjustHeadingRPS(float heading, float motorPercent);
-    void adjustYLocationRPS(float y_coordinate, float motorPercent, NORTH or SOUTH or EAST or WEST);
-    void adjustXLocationRPS(float x_coordinate, float motorPercent, NORTH or SOUTH or EAST or WEST);
-    void driveStraightEnc(DriveDirection direction, float speed, float distance);
-    void turnEnc(TurnDirection direction, float speed, float distance);
-    void turn90Enc(TurnDirection direction, float speed);
+        Final competition
     */
 
     //**** STARTUP SEQUENCE ****//
@@ -1159,9 +1119,6 @@ int main(void)
 
     //Check ports
     //checkPorts();
-
-    //Tests
-    //encoderTest();
 
     //Initialize RPS
     RPS.InitializeTouchMenu();
@@ -1186,12 +1143,7 @@ int main(void)
     while (!LCD.Touch(&touch_x, &touch_y));
 
     resetScreen();
-/*
-    while (true){
-    printDebug();
-    Sleep (200);
-    }
-*/
+
     //Set initial position for longarm
     longarm.SetDegree(115);
 
@@ -1226,5 +1178,4 @@ int main(void)
 
     //**** MOVE TO BOTTOM ****//
     doMoveToBottomAndEnd2();
-
 }
