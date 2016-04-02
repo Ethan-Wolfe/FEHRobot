@@ -8,11 +8,12 @@
 #include <FEHBuzzer.h>
 #include <math.h>
 
-#define PI 3.14159265
 
 /*
 * * * * Constants * * * *
 */
+#define PI 3.14159265
+
 enum WheelID {LEFTWHEEL = 0, RIGHTWHEEL = 1};
 
 enum DriveDirection {FORWARD = 1, BACKWARD = 0};
@@ -28,14 +29,20 @@ int redSwitchDir;
 int blueSwitchDir;
 int whiteSwitchDir;
 
- float xRead, xCorrection, yRead, yCorrection, bumpheading;
-
 /*
 * * * * Variables * * * *
 */
 /** RUNTIME DATA **/
 int seconds = 0;
-int RPSoffset = 0;
+
+/** RPS CORRECTION **/
+//Naming for wall: [item]_[x or y]_[direction robot is facing]
+float leftWall_x_wface = 0;
+float rightWall_x_eface = 0;
+float bottomSwitchWall_y_nface = -1;
+float northHeading = -1;
+float RPSOffset = 0;
+
 
 /** WHEELS **/
 //FEHMotor var(FEHMotor::port, float voltage);
@@ -73,7 +80,6 @@ void driveStraight(DriveDirection direction, float speed);
 void turn(TurnDirection direction, float speed, float seconds);
 void turn(TurnDirection direction, float speed);
 /** ADVANCED MOVEMENT **/
-void adjustHeadingRPS(float heading, float motorPercent);
 void adjustHeadingRPS2(float heading, float motorPercent, float tolerance);
 void adjustXLocationRPS(float x_coordinate, float motorPercent, FaceDirection dirFacing);
 void adjustYLocationRPS(float y_coordinate, float motorPercent, FaceDirection dirFacing);
@@ -172,61 +178,10 @@ void turn(TurnDirection direction, float speed) {
 }
 
 /** ADVANCED MOVEMENT **/
-void adjustHeadingRPS(float heading, float motorPercent, float tolerance) {
-    //Turn speed failsafe
-    //float encoderCounts = 3;
-    int loopCount = 0;
-
-    //See how far we are away from desired heading
-    float difference = heading - RPS.Heading();
-    if (difference < 0) difference *= -1; //Absolute value of difference
-    while (difference > tolerance) {
-        printDebug();
-
-        //Find what direction we should turn to
-        bool turnRight;
-        if (RPS.Heading() < heading) {
-            //Less than desired -> Increase degrees
-            turnRight = false;
-        } else {
-            //Greater than desired -> Decrease degrees
-            turnRight = true;
-        }
-        if (difference > 180) {
-            turnRight = !turnRight;
-        }
-
-        //Turn
-        if (turnRight) {
-            turn(RIGHT, motorPercent, .1);
-        } else {
-            turn(LEFT, motorPercent, .1);
-        }
-
-        Sleep(50);
-
-        //Recalculate difference
-        difference = heading - RPS.Heading();
-        if (difference < 0) difference *= -1;
-
-        //Failsafe
-        loopCount++;
-        if (loopCount > 400) {
-            motorPercent *= .8;
-            //encoderCounts *= .8;
-            loopCount = 0;
-        }
-        if (motorPercent <= 4) {
-            //Things have gone wrong
-            break;
-        }
-
-    }
-    stopAllWheels();
-    printDebug();
-}
-
 void adjustHeadingRPS2(float heading, float motorPercent, float tolerance) {
+	//RPS offset 
+	heading = heading + RPSOffset;
+	
     //Timeout
     int timeoutCount = 0;
     int widdleCount = 0;
@@ -570,7 +525,6 @@ void checkPorts() {
     }
 }
 
-
 void encoderTest() {
     //void driveStraightEnc(DriveDirection direction, float speed, float distance);
     //void turnEnc(TurnDirection direction, float speed, float distance);
@@ -596,102 +550,221 @@ void encoderTest() {
 void doBottomSwitches() {
     //**** BOTTOM SWITCHES ****//
 
-    //Turn to face switches
+    //Turn to face northwest
     setWheelPercent(RIGHTWHEEL, 40);
     Sleep(1.5);
     stopAllWheels();
+	
+	//Drive straight till we get to a certain x value
     driveStraight(FORWARD, 30);
     while (RPS.X() > 8);
     stopAllWheels();
     adjustXLocationRPS(8, 30, NORTH, 1.0);
+	
+	//Turn (? -> north)
     adjustHeadingRPS2(90, 20, 1.0);
 
     //Drive till bump against wall
     driveStraight(FORWARD, 50);
     while (!isFrontAgainstWall());
     stopAllWheels();
+	
+	//Set the y position of the bottom switch wall and GET RPS OFFSET (IMPORTANT)
+	Sleep(100);
+	bottomSwitchWall_y_nface = RPS.Y();
+	northHeading = RPS.Heading();
+	RPSOffset = 90 - RPS.Heading();
 
-    bumpheading = RPS.Heading();
-    yRead = RPS.Y();
-    yCorrection = 25.5 - yRead;
-
-    //Backup to a certain spot
+    //Backup to a certain spot back from switches 
+	float bottomSwitchSpotY = bottomSwitchWall_y_nface - 5;
+		
     driveStraight(BACKWARD, 20, 1.6);
-    adjustYLocationRPS(22, 20, NORTH, 0.8);
+    adjustYLocationRPS(bottomSwitchSpotY, 20, NORTH, 0.8);
 
     //Decide which switch to press
     //red - left, white - middle, blue - right
-    //1 - forward, 2 - backwards
+    //1 - forward (pull), 2 - backwards (push)
+	bool shouldDoRedSwitch = true;
+	bool shouldDoWhiteSwitch = true;
+	bool shouldDoBlueSwitch = true;
     redSwitchDir = 2; //RPS.RedSwitchDirection();
     blueSwitchDir = 2; //RPS.BlueSwitchDirection();
     whiteSwitchDir = 2; //RPS.WhiteSwitchDirection();
 
-
-    if (whiteSwitchDir == 2) {
-        //Set arm height
-        longarm.SetDegree(54);
-
-        //Drive forward
-        driveStraight(FORWARD, 30, 1.3);
-
-        //Backup
-        driveStraight(BACKWARD, 20, 1.4);
-        adjustYLocationRPS(22, 20, NORTH, 0.8);
+	//*** RED SWITCH ***
+    if (shouldDoRedSwitch) {
+		//Turn (north -> west)
+		turn(LEFT, 30, 1.0);
+		adjustHeadingRPS2(180, 20, 1.5);
+		
+		//Drive straight till we bump against left wall
+	    driveStraight(FORWARD, 50);
+	    while (!isFrontAgainstWall());
+	    stopAllWheels();
+		
+		//Set the x position of the left wall
+		Sleep(100);
+		leftWall_x_wface = RPS.X();
+		
+		//Backup to correct x position for red switch
+		adjustXLocationRPS(leftWall_x_wface + 3, 20, WEST, 0.8);
+		
+		//Turn to face red switch (west -> north)
+		turn(RIGHT, 30, 1.0);
+		adjustHeadingRPS2(90, 20, 0.8);
+		
+		//Decide whether to push or pull switch
+		if (redSwitchDir == 2) { //** PUSH **
+	        //Set arm height to push height
+	        longarm.SetDegree(54);
+			
+	        //Drive forward to push switch
+	        driveStraight(FORWARD, 30, 1.2);
+			
+			//Drive back to switch spot
+			adjustYLocationRPS(bottomSwitchSpotY, 20, NORTH, 0.8);
+			
+			//Lift up arm
+			longarm.SetDegree(115);
+		} 
+		if (redSwitchDir == 1) { //** PULL **
+	        //Set arm height to be above switch
+	        longarm.SetDegree(90);
+			
+			//Drive straight till bump against switch wall
+		    driveStraight(FORWARD, 40);
+		    while (!isFrontAgainstWall());
+		    stopAllWheels();
+			
+	        //Lower arm to be behind switch
+	        longarm.SetDegree(54);
+			
+			//Back up slightly to pull switch
+			driveStraight(BACKWARD, 20, 1.0);
+			
+			//Drive straight till bump against switch wall
+		    driveStraight(FORWARD, 40);
+		    while (!isFrontAgainstWall());
+		    stopAllWheels();
+			
+			//Lift up arm
+			longarm.SetDegree(115);
+			
+			//Drive back to switch spot
+			adjustYLocationRPS(bottomSwitchSpotY, 20, NORTH, 0.8);
+		}
     }
-
-    if (redSwitchDir == 2) {
-        //Turn left
-        turn(LEFT, 30, 0.5);
-        adjustHeadingRPS2(180, 25, 1.0);
-
-        //Drive
-        float originX = RPS.X();
-        adjustXLocationRPS(originX - 2, 20, WEST, 1.0);
-
-        //Turn straight
-        adjustHeadingRPS2(96, 25, 1.0);
-
-        //Set arm height
-        longarm.SetDegree(54);
-
-        //Drive forward
-        driveStraight(FORWARD, 30, 1.2);
-
-        //Backup
-        longarm.SetDegree(55);
-        driveStraight(BACKWARD, 30, 1.0);
-        adjustHeadingRPS2(0, 25, 1.0);
-
-        //Go back to original position
-        adjustXLocationRPS(originX-1.5, 20, EAST, 1.0);
+	
+	//*** WHITE SWITCH ***
+    if (shouldDoWhiteSwitch) {
+		//Turn (north -> east)
+		turn(RIGHT, 30, 1.0);
+		adjustHeadingRPS2(0, 20, 1.5);
+		
+		//Drive straight till we get to correct x position for white switch
+		driveStraight(FORWARD, 30, 1.0);
+		adjustXLocationRPS(leftWall_x_wface + 2, 20, EAST, 0.8);
+		
+		//Turn to face white switch (east -> north)
+		turn(LEFT, 30, 1.0);
+		adjustHeadingRPS2(90, 20, 0.8);
+		
+		//Decide whether to push or pull switch
+		if (whiteSwitchDir == 2) { //** PUSH **
+	        //Set arm height to push height
+	        longarm.SetDegree(54);
+			
+	        //Drive forward to push switch
+	        driveStraight(FORWARD, 30, 1.2);
+			
+			//Drive back to switch spot
+			adjustYLocationRPS(bottomSwitchSpotY, 20, NORTH, 0.8);
+			
+			//Lift up arm
+			longarm.SetDegree(115);
+		} 
+		if (whiteSwitchDir == 1) { //** PULL **
+	        //Set arm height to be above switch
+	        longarm.SetDegree(90);
+			
+			//Drive straight till bump against switch wall
+		    driveStraight(FORWARD, 40);
+		    while (!isFrontAgainstWall());
+		    stopAllWheels();
+			
+	        //Lower arm to be behind switch
+	        longarm.SetDegree(54);
+			
+			//Back up slightly to pull switch
+			driveStraight(BACKWARD, 20, 1.0);
+			
+			//Drive straight till bump against switch wall
+		    driveStraight(FORWARD, 40);
+		    while (!isFrontAgainstWall());
+		    stopAllWheels();
+			
+			//Lift up arm
+			longarm.SetDegree(115);
+			
+			//Drive back to switch spot
+			adjustYLocationRPS(bottomSwitchSpotY, 20, NORTH, 0.8);
+		}
     }
-
-    if (blueSwitchDir == 2) {
-        //Turn left
-        //turn(LEFT, 30, 0.5);
-       // adjustHeadingRPS2(0, 25, 1.0);
-
-        //Drive
-        //int originX = RPS.X();
-//        adjustXLocationRPS(originX + 2, 20, EAST, 1.0);
-
-        //Turn straight
-        longarm.SetDegree(100);
-        adjustHeadingRPS2(90, 25, 1.0);
-
-        //Set arm height
-        longarm.SetDegree(54);
-
-        //Drive forward
-        driveStraight(FORWARD, 30, 1.2);
-
-        //Backup
-        longarm.SetDegree(55);
-        driveStraight(BACKWARD, 30, 1.0);
-        //adjustHeadingRPS2(180, 25, 1.0);
-
-        //Go back to original position
-        //adjustXLocationRPS(originX - 2, 20, WEST, 1.0);
+	
+	//*** BLUE SWITCH ***
+    if (shouldDoWhiteSwitch) {
+		//Turn (north -> east)
+		turn(RIGHT, 30, 1.0);
+		adjustHeadingRPS2(0, 20, 1.5);
+		
+		//Drive straight till we get to correct x position for blue switch
+		driveStraight(FORWARD, 30, 1.0);
+		adjustXLocationRPS(leftWall_x_wface + 5, 20, EAST, 0.8);
+		
+		//Turn to face blue switch (east -> north)
+		turn(LEFT, 30, 1.0);
+		adjustHeadingRPS2(90, 20, 0.8);
+		
+		//Decide whether to push or pull switch
+		if (blueSwitchDir == 2) { //** PUSH **
+	        //Set arm height to push height
+	        longarm.SetDegree(54);
+			
+	        //Drive forward to push switch
+	        driveStraight(FORWARD, 30, 1.2);
+			
+			//Drive back to switch spot
+			adjustYLocationRPS(bottomSwitchSpotY, 20, NORTH, 0.8);
+			
+			//Lift up arm
+			longarm.SetDegree(115);
+		} 
+		if (blueSwitchDir == 1) { //** PULL **
+	        //Set arm height to be above switch
+	        longarm.SetDegree(90);
+			
+			//Drive straight till bump against switch wall
+		    driveStraight(FORWARD, 40);
+		    while (!isFrontAgainstWall());
+		    stopAllWheels();
+			
+	        //Lower arm to be behind switch
+	        longarm.SetDegree(54);
+			
+			//Back up slightly to pull switch
+			driveStraight(BACKWARD, 20, 1.0);
+			
+			//Drive straight till bump against switch wall
+		    driveStraight(FORWARD, 40);
+		    while (!isFrontAgainstWall());
+		    stopAllWheels();
+			
+			//Lift up arm
+			longarm.SetDegree(115);
+			
+			//Drive back to switch spot
+			adjustYLocationRPS(bottomSwitchSpotY, 20, NORTH, 0.8);
+		}
     }
 }
 
