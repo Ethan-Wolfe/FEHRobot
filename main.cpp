@@ -942,113 +942,6 @@ void doDumbbellDrop() {
 	Sleep(200);
 }
 
-void doTopSwitches() {
-	//Bump back against wall
-	setWheelPercent(LEFTWHEEL, -40);
-	Sleep(0.5);
-	stopAllWheels();
-	setWheelPercent(RIGHTWHEEL, -40);
-	while (bottom_left_bump.Value() == 1);
-	stopAllWheels();
-	setWheelPercent(RIGHTWHEEL, -40);
-	//driveStraight(BACKWARD, 40);
-	while (!isBackAgainstWall());
-	stopAllWheels();
-
-	//Drive straight a little bit
-	driveStraight(FORWARD, 40, 0.8);
-
-	//Turn 180 to be facing toward switches
-	turn(RIGHT, 40, 1.8);
-	Sleep(200);
-
-	//Drive straight till bump against wall
-	driveStraight(FORWARD, 30);
-	while (top_right_bump.Value() == 1);
-	setWheelPercent(LEFTWHEEL, 40);
-	while (!isFrontAgainstWall());
-	stopAllWheels();
-	Sleep(200);
-
-	//Backup a little bit TO LOCATION BEHIND WHITE
-	driveStraight(BACKWARD, 30, 1.8);
-	Sleep(200);
-
-
-	//TOP SWITCH LOGIC ADDED 3/30 BY KEV AND JAKE
-	/*
-	if (whiteSwitchDir == 1) {
-	//Set arm height
-	longarm.SetDegree(35);
-
-	//Drive forward
-	driveStraight(FORWARD, 30, 1.3);
-
-	//Backup
-	driveStraight(BACKWARD, 30, 1.3);
-	//adjustYLocationRPS(20, 20, NORTH, 0.8);
-
-	if (blueSwitchDir == 2 && redSwitchDir == 2 ){
-	//Turn (south -> east)
-	turn(LEFT, 40, .75);
-	}
-	}
-
-	if (blueSwitchDir == 1) {
-	//Turn right
-	turn(LEFT, 30, 0.3);
-	//adjustHeadingRPS2(68, 20, 1.2);
-	Sleep(200);
-	//Set arm height
-	longarm.SetDegree(35);
-	Sleep(200);
-	//Drive forward
-	driveStraight(FORWARD, 30, 1.8);
-
-	//Backup
-	driveStraight(BACKWARD, 30, 1.8);
-	//adjustYLocationRPS(20, 20, NORTH, 0.8);
-	Sleep(200);
-
-
-	if (redSwitchDir == 2 ){
-	//Turn (south -> east)
-	turn(LEFT, 40, .6);
-	}
-	else{
-	turn(RIGHT, 30, 0.3);
-	}
-	}
-
-	if (redSwitchDir == 1) {
-	//Turn left
-	turn(RIGHT, 30, 0.4);
-	//adjustHeadingRPS2(114, 20, 1.4);
-
-	//Set arm height
-	longarm.SetDegree(35);
-
-	//Drive forward
-	driveStraight(FORWARD, 30, 1.8);
-
-	//Backup
-	driveStraight(BACKWARD, 30, 1.8);
-	//adjustYLocationRPS(20, 20, NORTH, 0.8);
-
-	//Turn (south -> east)
-	turn(LEFT, 40, 1.0);
-	}
-	*/
-
-	//Turn (south -> east)
-	turn(LEFT, 40, 1.0);
-
-	driveStraight(FORWARD, 60);
-	while (RPS.X() < 24);
-	stopAllWheels();
-
-}
-
 void doMoveToBottomAndEnd() {
 	//Turn towards ramp
 	adjustHeadingRPS2(90, 20, 1.0);
@@ -1176,9 +1069,6 @@ int main(void) {
 
 	//**** DUMBBELL DROP ****//
 	//doDumbbellDrop();
-
-	//**** TOP BUTTONS  ****//
-	//doTopSwitches();
 
 	//**** MOVE TO BOTTOM ****//
 	doMoveToBottomAndEnd2();
