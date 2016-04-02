@@ -758,17 +758,17 @@ void doDumbbell() {
     while (RPS.Y() > 16.5);
     stopAllWheels();
 
-    //Turn to the LEFT to face right wall
+    //Turn to face right wall (southeast -> east)
     turn(LEFT, 30, 0.7);
     adjustHeadingRPS2(0, 20, 1.3);
 
     //Drive until bump against right wall in front of dumbbell
     driveStraight(FORWARD, 40);
     while (!isFrontAgainstWall());
-    //LCD.WriteRC("X we want", 6, 0);
-    //LCD.WriteRC(RPS.X(), 7, 0);
     stopAllWheels();
-
+	
+	//Set x coordinate of east wall
+	rightWall_x_eface = RPS.X();
 
     //Backup slighty to get apart from wall then turn (east -> south) to face dumbbell
     driveStraight(BACKWARD, 30, 1.0);
@@ -777,8 +777,8 @@ void doDumbbell() {
     adjustHeadingRPS2(270, 15, .8);
     Sleep(100);
 
-    //Backup
-    adjustYLocationRPS(18.75-yCorrection, 20, SOUTH, 0.8);
+    //Backup to correct y position to land arm on dumbbell platform
+    adjustYLocationRPS(18.75, 20, SOUTH, 0.8);
     Sleep(100);
 
     //Lower longarm to dumbbell height
@@ -1104,8 +1104,7 @@ void doMoveToBottomAndEnd2() {
 /*
 * * * ****************************************************************** Main ************************************************************************* * * *
 */
-int main(void)
-{
+int main(void) {
 
     /*
         Final competition
