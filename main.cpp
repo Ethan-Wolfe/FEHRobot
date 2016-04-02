@@ -37,8 +37,11 @@ int seconds = 0;
 
 /** RPS CORRECTION **/
 //Naming for wall: [item]_[x or y]_[direction robot is facing]
+//Static acquisition
+float bottomWall_y_sface = -1;
+//Dynamic acquisition 
 float leftWall_x_wface = 0;
-float rightWall_x_eface = 0;
+float rightWall_x_eface = -1;
 float bottomSwitchWall_y_nface = -1;
 float northHeading = -1;
 float RPSOffset = 0;
@@ -804,7 +807,7 @@ void doMoveToTop() {
     //Get close to ramp
     driveStraight(BACKWARD, 40, 1.5);
     adjustYLocationRPS(26, 20, SOUTH, 0.8);
-    Sleep(250);
+    Sleep(100);
 
     //Adjust heading (north -> east)
     adjustHeadingRPS2(269, 20, 0.8);
@@ -816,12 +819,12 @@ void doMoveToTop() {
 
     //Drive up ramp
     driveStraight(BACKWARD, 70, 2.5);
-    Sleep(1.0);
 
     //Lower longarm and turn south
     longarm.SetDegree(110);
+	Sleep(100);
     adjustHeadingRPS2(270, 30, 1.0);
-    Sleep(1.0);
+	Sleep(100);
 }
 
 void doButtons() {
