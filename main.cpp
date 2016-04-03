@@ -6,6 +6,7 @@
 #include <FEHRPS.h>
 #include <FEHServo.h>
 #include <FEHBuzzer.h>
+#include <FEHBattery.h>
 #include <math.h>
 
 
@@ -832,19 +833,16 @@ void doButtons() {
 	//**** BUTTONS ****//
 
 	//Check if we need to adjust our x position for the buttons
-	float buttonX = rightWall_x_eface - 2  //Should be around x=26
+	float buttonX = rightWall_x_eface - 2;  //Should be around x=26
+		
 	if (RPS.X() >= buttonX + 1 || RPS.X() <= buttonX -1) {
-	
 		//Adjust heading (south -> east)
 		turn(LEFT, 40, 1.0);
 		adjustHeadingRPS2(0, 20, 1.1);
-		Sleep(200);
 
 		//Adjust x position to be in line with buttons
 		adjustXLocationRPS(buttonX, 20, EAST, .6);
-		Sleep(200);
-	}
-	else {
+	} else {
 		turn(LEFT, 30, 1.0);
 	}
 
@@ -1035,7 +1033,10 @@ int main(void) {
 	//Wait to start
 	Sleep(2.0);
 	float touch_x, touch_y;
-	LCD.WriteLine("BUILD ID: 55");
+	LCD.WriteLine("BUILD ID: 72");
+	LCD.Write("Battery: ");
+	LCD.Write(Battery.Voltage());
+	LCD.WriteLine(" / (11.2-11.7 V)");
 	LCD.WriteLine("Touch to start");
 	while (!LCD.Touch(&touch_x, &touch_y));
 
