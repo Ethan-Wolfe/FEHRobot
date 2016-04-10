@@ -119,7 +119,7 @@ void checkPorts();
 void setWheelPercent(WheelID wheel, float percent) {
     switch (wheel) {
         case LEFTWHEEL:
-        left_wheel.SetPercent(percent*1.035);
+        left_wheel.SetPercent(percent*1.06);
         g_left_wheel_percent = percent;
         break;
         //MANIPULATE WHEELS HERE
@@ -632,7 +632,9 @@ void doBottomSwitches() {
             //Drive forward to push switch
             /*WE CHANGED THE DISTANCE FROM
              * 0.95 ***************************************************************************/
-            driveStraight(FORWARD, 30, .75);
+            driveStraight(FORWARD, 30, .77);
+            longarm.SetDegree(115);
+            Sleep(200);
 
             //Drive back to switch spot
             driveStraight(BACKWARD, 40, 0.4);
@@ -658,7 +660,7 @@ void doBottomSwitches() {
             Sleep(0.8);
 
             //Back up slightly to pull switch
-            driveStraight(BACKWARD, 20, 0.65);
+            driveStraight(BACKWARD, 20, 0.7);
 
             //Drive straight to bump against wall
             driveStraight(FORWARD, 40);
@@ -701,8 +703,9 @@ void doBottomSwitches() {
 
             //Drive forward to push switch
             //WE CHANGED THIS FROM 0.68***************************************************************************
-
-            driveStraight(FORWARD, 30, 0.6);
+            driveStraight(FORWARD, 30, 0.7);
+            longarm.SetDegree(115);
+            Sleep(300);
 
             //Drive back to switch spot
             driveStraight(BACKWARD, 40, 0.4);
@@ -726,7 +729,7 @@ void doBottomSwitches() {
             Sleep(0.8);
 
             //Back up slightly to pull switch
-            driveStraight(BACKWARD, 20, 0.65);
+            driveStraight(BACKWARD, 20, 0.7);
 
             //Drive straight to bump against wall
             driveStraight(FORWARD, 40);
@@ -770,7 +773,9 @@ void doBottomSwitches() {
 
             //Drive forward to push switch
             //CHANGED FROM 0.65******************************************************************************************
-            driveStraight(FORWARD, 30, 0.6);
+            driveStraight(FORWARD, 30, 0.7);
+            longarm.SetDegree(115);
+            Sleep(300);
 
             //Drive back to switch spot
             driveStraight(BACKWARD, 40, 0.4);
@@ -794,7 +799,7 @@ void doBottomSwitches() {
             Sleep(0.8);
 
             //Back up slightly to pull switch
-            driveStraight(BACKWARD, 20, 0.65);
+            driveStraight(BACKWARD, 20, 0.7);
 
             //Drive straight to bump against wall
             driveStraight(FORWARD, 40);
@@ -1004,7 +1009,7 @@ void doDumbbellDrop() {
     Sleep(300);
 
     //Get close to drop off
-    driveStraight(FORWARD, 50, 1.95);
+    driveStraight(FORWARD, 50, 1.87);
 
     //Deposit dumbbell
     longarm.SetDegree(20+8);
@@ -1053,6 +1058,12 @@ void doMoveToBottomAndEnd() {
     adjustHeadingRPS2(200, 15, 0.8);
     longarm.SetDegree(175);
     driveStraight(FORWARD, 90);
+
+    //Failsafe
+    Sleep(10.0);
+    driveStraight(BACKWARD, 40, 2.5);
+    adjustHeadingRPS2(200, 30, 0.8);
+    driveStraight(FORWARD, 90);
 }
 
 
@@ -1096,7 +1107,7 @@ int main(void) {
     //LCD.WriteLine(" / (11.2-11.7 V)");
     Sleep(2.0);
     float touch_x, touch_y;
-    LCD.WriteLine("BUILD ID: 32");
+    LCD.WriteLine("BUILD ID: 84");
     LCD.WriteLine("Touch to initiate (1)");
     while (!LCD.Touch(&touch_x, &touch_y));
     resetScreen();
