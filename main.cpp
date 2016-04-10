@@ -72,9 +72,9 @@ DigitalEncoder right_encoder(FEHIO::P3_2);
 DigitalEncoder left_encoder(FEHIO::P3_0);
 
 /** LINE FOLLOWING **/
-AnalogInputPin rightLF(FEHIO::P0_2);
-AnalogInputPin middleLF(FEHIO::P0_3);
-AnalogInputPin leftLF(FEHIO::P0_4);
+AnalogInputPin rightLF(FEHIO::P1_2);
+AnalogInputPin middleLF(FEHIO::P1_4);
+AnalogInputPin leftLF(FEHIO::P1_6);
 
 
 /*
@@ -119,7 +119,7 @@ void checkPorts();
 void setWheelPercent(WheelID wheel, float percent) {
     switch (wheel) {
         case LEFTWHEEL:
-        left_wheel.SetPercent(percent*1.04);
+        left_wheel.SetPercent(percent*1.035);
         g_left_wheel_percent = percent;
         break;
         //MANIPULATE WHEELS HERE
@@ -606,6 +606,11 @@ void doBottomSwitches() {
     whiteSwitchDir = RPS.WhiteSwitchDirection();
     blueSwitchDir = RPS.BlueSwitchDirection();
 
+    /*
+    if (redSwitchDir == whiteSwitchDir) {
+        shouldDoWhiteSwitch = false;
+    }*/
+
     //*** RED SWITCH ***
     if (shouldDoRedSwitch) {
         //Turn (north -> west)
@@ -626,7 +631,7 @@ void doBottomSwitches() {
 
         //Turn to face red switch (west -> north)
         turn(RIGHT, 40, 1.0);
-        adjustHeadingRPS2(northHeading, 20, 0.8);
+        adjustHeadingRPS2(northHeading+1, 20, 0.8);
 
         //Decide whether to push or pull switch
         if (redSwitchDir == 2) { //** PUSH **
@@ -634,7 +639,9 @@ void doBottomSwitches() {
             longarm.SetDegree(48);
 
             //Drive forward to push switch
-            driveStraight(FORWARD, 30, 0.71);
+            /*WE CHANGED THE DISTANCE FROM
+             * 0.95 ***************************************************************************/
+            driveStraight(FORWARD, 30, .75);
 
             //Drive back to switch spot
             driveStraight(BACKWARD, 40, 0.4);
@@ -697,7 +704,9 @@ void doBottomSwitches() {
             longarm.SetDegree(48);
 
             //Drive forward to push switch
-            driveStraight(FORWARD, 30, 0.65);
+            //WE CHANGED THIS FROM 0.68***************************************************************************
+
+            driveStraight(FORWARD, 30, 0.5);
 
             //Drive back to switch spot
             driveStraight(BACKWARD, 40, 0.4);
@@ -744,11 +753,12 @@ void doBottomSwitches() {
     if (shouldDoWhiteSwitch) {
         //Turn (north -> west)
         turn(LEFT, 40, 1.0);
-        adjustHeadingRPS2(180, 20, 1.5);
+        adjustHeadingRPS2(180, 20, 1.0);
 
         //Drive straight till we get to correct x position for white switch
         driveStraight(FORWARD, 30, 1.0);
-        adjustXLocationRPS(leftWall_x_wface+3.7, 20, WEST, 0.8);
+        //WE CHANGED THIS FROM + 3.9
+        adjustXLocationRPS(leftWall_x_wface+4.1, 12, WEST, 0.8);
 
         //Turn to face white switch (west -> north)
         turn(RIGHT, 40, 1.0);
@@ -760,7 +770,8 @@ void doBottomSwitches() {
             longarm.SetDegree(48);
 
             //Drive forward to push switch
-            driveStraight(FORWARD, 30, 0.65);
+            //CHANGED FROM 0.65******************************************************************************************
+            driveStraight(FORWARD, 30, 0.5);
 
             //Drive back to switch spot
             driveStraight(BACKWARD, 40, 0.4);
@@ -848,11 +859,11 @@ void doDumbbell() {
 
     //Backup a little
     driveStraight(BACKWARD, 40, 1.0);
-    adjustYLocationRPS(ypos + 4.5, 20, SOUTH, 0.8);
+    adjustYLocationRPS(ypos + 4, 20, SOUTH, 0.8);
 
     //Lower longarm to dumbbell height
-    longarm.SetDegree(12);
-    Sleep(0.5);
+    longarm.SetDegree(15);
+    Sleep(1.0);
 
     //Adjust heading to face dumbbell
     //adjustHeadingRPS2(dumbbellHeading, 15, 0.8);
@@ -883,11 +894,13 @@ void doMoveToTop() {
     Sleep(100);
 
     //Lift up dumbbell
-    longarm.SetDegree(135);
+    /*WE CHANGED THE ANGLE FROM 135********************************************/
+    longarm.SetDegree(150);
     Sleep(0.5);
 
     //Drive up ramp
-    driveStraight(BACKWARD, 70, 2.9);
+    //WE CHANGED THIS FROM 2.9************************************************
+    driveStraight(BACKWARD, 70, 3.2);
 
     //Lower longarm and turn south
     longarm.SetDegree(110);
@@ -900,13 +913,14 @@ void doButtons() {
     //**** BUTTONS ****//
 
     //Check if we need to adjust our x position for the buttons
-    float buttonX = rightWall_x_eface - 2.5;  //Should be around x=26
+    float buttonX = rightWall_x_eface - 1.7;  //Should be around x=26
 
     //Adjust heading (south -> east)
     turn(LEFT, 40, 1.0);
     adjustHeadingRPS2(0, 20, 1.5);
     //Adjust x position to be in line with buttons
-    adjustXLocationRPS(buttonX, 20, EAST, .6);
+    //MOTOR SPEED CHANGED FROM 15**************************************
+    adjustXLocationRPS(buttonX, 10, EAST, .6);
 
     //Turn to face buttons
     turn(LEFT, 30, 1.0);
@@ -929,7 +943,20 @@ void doButtons() {
     LightColor buttonColor;
     buttonColor = getLightColor();
 
+    if (buttonColor == cNONE) {
+        float t = TimeNow();
+        while (TimeNow() < t+0.5 && getLightColor() == cNONE) {
+            turn(RIGHT, 15);
+        }
+        stopAllWheels();
+    }
+
+    buttonColor = getLightColor();
+
     if (buttonColor == cRED) {
+        //SLIGHT RIGHT TURN COMMENTED OUT*********************************************************
+        //turn(RIGHT, 20, 0.1);
+
         //Adjust arm to be in line with button
         longarm.SetDegree(115);
         Sleep(1.0);
@@ -963,7 +990,7 @@ void doDumbbellDrop() {
     adjustYLocationRPS(57, 20, NORTH, 1.0);
 
     //Turn (north -> east)
-    turn(LEFT, 40, 1.0);
+    turn(LEFT, 40, 0.8);
     //adjustHeadingRPS2(180, 30, 1.5);
 
     //Backup to be square against back wall
@@ -1004,15 +1031,24 @@ void doMoveToBottomAndEnd() {
     driveStraight(BACKWARD, 50);
 
     //Drive to finish button
-    while (RPS.Y() > 22 || RPS.Y() <= 0);
+    while (RPS.Y() > 20 || RPS.Y() <= 0);
     stopAllWheels();
-    adjustYLocationRPS(22, 30, NORTH, 1.0);
+    //CHANGED FROM 30 TO 15*********************************************
+    adjustYLocationRPS(20, 15, NORTH, 0.8);
+
+    //Adjust heading (south -> east)
+    turn(LEFT, 40, 1.0);
+    adjustHeadingRPS2(180, 20, 1);
+    //Adjust x position to be in line with buttons
+    driveStraight(FORWARD, 40, 1.0);
+    //CHANGED FROM 30 TO 15********************************************
+    adjustXLocationRPS(rightWall_x_eface-3, 15, WEST, 1);
 
     //Turn to face end
-    turn(LEFT, 40, 1.0);
-    adjustHeadingRPS2(205, 20, 1.0);
-    longarm.SetDegree(125);
-    driveStraight(FORWARD, 85);
+    turn(LEFT, 40, 0.5);
+    adjustHeadingRPS2(200, 15, 0.8);
+    longarm.SetDegree(175);
+    driveStraight(FORWARD, 90);
 }
 
 
@@ -1034,16 +1070,6 @@ int main(void) {
     //Check ports
     //checkPorts();
 
-    //test
-    while (true) {
-        resetScreen();
-        LCD.Write("RIGHT: ");
-        LCD.WriteLine(top_right_bump.Value());
-        LCD.Write("LEFT: ");
-        LCD.WriteLine(top_left_bump.Value());
-        Sleep(200);
-    }
-
     //Initialize RPS
     RPS.InitializeTouchMenu();
 
@@ -1060,7 +1086,7 @@ int main(void) {
     longarm.SetMax(2438);
 
     //Wait to start
-    //I don't think the FEH battery function actually works (or the proteus is broken)
+    //I don't think the FEH battery function actually works
     //LCD.Write("Battery: ");
     //LCD.Write(Battery.Voltage());
     //LCD.WriteLine(" / (11.2-11.7 V)");
